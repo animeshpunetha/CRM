@@ -1,0 +1,52 @@
+<%- include('../partials/header') %>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+    <h2 class="card-title mb-0">All Leads</h2>
+    <div>
+      <a href="/leads/new" class="btn btn-light me-2">New Lead</a> <a href="/leads/import" class="btn btn-light">Import XLSX</a>
+    </div>
+  </div>
+  <div class="card-body">
+    <% if (leads && leads.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table table-hover table-striped">
+          <thead class="table-light">
+            <tr>
+              <th>Owner</th>
+              <th>Name</th>
+              <th>Company</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Created At</th>
+              <th>Actions</th> </tr>
+          </thead>
+          <tbody>
+            <% leads.forEach(lead => { %>
+              <tr>
+                <td><%= lead.owner.name %></td>
+                <td><%= lead.name %></td>
+                <td><%= lead.company %></td>
+                <td><%= lead.email %></td>
+                <td><%= lead.phone %></td>
+                <td><%= lead.createdAt.toLocaleDateString() %></td>
+                <td>
+                  <a href="/leads/<%= lead._id %>" class="btn btn-sm btn-info me-2">View</a>
+                  <a href="/leads/<%= lead._id %>/edit" class="btn btn-sm btn-warning">Edit</a>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <div class="alert alert-info" role="alert">
+        No leads found. Why not add one or import from Excel?
+      </div>
+    <% } %>
+  </div>
+  <div class="card-footer text-end">
+    </div>
+</div>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,48 @@
+<%- include('../partials/header') %>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-primary text-white">
+    <h2 class="card-title mb-0">New Lead</h2>
+  </div>
+  <div class="card-body">
+    <form action="/leads" method="POST">
+      <div class="mb-3">
+        <label for="owner" class="form-label">Owner</label>
+        <select name="owner" id="owner" class="form-select" required>
+          <option value="">-- Select Owner --</option> <% users.forEach(user => { %>
+            <option value="<%= user._id %>" <%= (typeof owner !== 'undefined' && owner.toString() === user._id.toString()) ? 'selected' : '' %>>
+              <%= user.name %>
+            </option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label for="name" class="form-label">Name</label>
+        <input name="name" type="text" class="form-control" id="name" value="<%= typeof name!=='undefined'? name : '' %>" required>
+      </div>
+      <div class="mb-3">
+        <label for="company" class="form-label">Company</label>
+        <input name="company" type="text" class="form-control" id="company" value="<%= typeof company!=='undefined'? company : '' %>" required>
+      </div>
+      <div class="mb-3">
+        <label for="email" class="form-label">Email</label>
+        <input name="email" type="email" class="form-control" id="email" value="<%= typeof email!=='undefined'? email : '' %>" required>
+      </div>
+      <div class="mb-3">
+        <label for="phone" class="form-label">Phone</label>
+        <input name="phone" type="text" class="form-control" id="phone" value="<%= typeof phone!=='undefined'? phone : '' %>" required>
+      </div>
+      <div class="mb-3">
+        <label for="description" class="form-label">Description</label>
+        <textarea name="description" id="description" class="form-control" rows="3"><%= typeof description!=='undefined'? description : '' %></textarea>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-4">
+        <button type="submit" class="btn btn-success">Create Lead</button>
+        <a href="/leads" class="btn btn-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

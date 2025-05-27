@@ -1,0 +1,81 @@
+<%- include('../partials/header') %>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-primary text-white">
+    <h2 class="card-title mb-0">New Account</h2>
+  </div>
+  <div class="card-body">
+    <% if (errors && errors.length) { %>
+      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <ul class="mb-0 ps-3">
+          <% errors.forEach(e => { %>
+            <li><%= e.msg %></li>
+          <% }) %>
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    <% } %>
+
+    <form action="/accounts" method="POST">
+      <div class="mb-3">
+        <label for="owner" class="form-label">Account Owner</label>
+        <select name="owner" id="owner" class="form-select" required>
+          <option value="">-- Select Owner --</option>
+          <% users.forEach(user => { %>
+            <option value="<%= user._id %>" <%= (typeof owner !== 'undefined' && owner.toString() === user._id.toString()) ? 'selected' : '' %>>
+              <%= user.name %>
+            </option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label for="name" class="form-label">Account Name</label>
+        <input name="name" type="text" class="form-control" id="name" value="<%= typeof name !== 'undefined' ? name : '' %>" required>
+      </div>
+
+      <div class="mb-3">
+        <label for="type" class="form-label">Account Type</label>
+        <input name="type" type="text" class="form-control" id="type" value="<%= typeof type !== 'undefined' ? type : '' %>" required>
+      </div>
+
+      <div class="mb-3">
+        <label for="industry" class="form-label">Industry</label>
+        <input name="industry" type="text" class="form-control" id="industry" value="<%= typeof industry !== 'undefined' ? industry : '' %>" required>
+      </div>
+
+      <h5 class="mt-4 mb-3">Billing Address</h5>
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label for="billing_street" class="form-label">Street</label>
+          <input name="billing_street" type="text" class="form-control" id="billing_street" value="<%= typeof billing_street !== 'undefined' ? billing_street : '' %>" required>
+        </div>
+        <div class="col-md-6 mb-3">
+          <label for="billing_city" class="form-label">City</label>
+          <input name="billing_city" type="text" class="form-control" id="billing_city" value="<%= typeof billing_city !== 'undefined' ? billing_city : '' %>" required>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label for="billing_state" class="form-label">State</label>
+          <input name="billing_state" type="text" class="form-control" id="billing_state" value="<%= typeof billing_state !== 'undefined' ? billing_state : '' %>" required>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label for="billing_code" class="form-label">Postal Code</label>
+          <input name="billing_code" type="text" class="form-control" id="billing_code" value="<%= typeof billing_code !== 'undefined' ? billing_code : '' %>" required>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label for="billing_country" class="form-label">Country</label>
+          <input name="billing_country" type="text" class="form-control" id="billing_country" value="<%= typeof billing_country !== 'undefined' ? billing_country : '' %>" required>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-4">
+        <button type="submit" class="btn btn-success">Create Account</button>
+        <a href="/accounts" class="btn btn-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>
