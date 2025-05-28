@@ -2,6 +2,13 @@ const express = require('express');
 const router = express.Router();
 const Account = require('../models/Account');
 const User = require('../models/User');
+const Excel = require('exceljs');
+const multer = require('multer');
+const { parseExcelBuffer } = require('../utils/excelImporter');
+
+// Set up multer (in-memory storage)
+const upload = multer({ storage: multer.memoryStorage() });
+
 
 // GET /accounts
 router.get('/', async (req, res) => {
@@ -115,6 +122,81 @@ router.post('/', async (req, res) => {
       billing_code,
       billing_country
     });
+  }
+});
+
+// GET /accounts/import → show Excel upload form
+router.get('/import', async (req, res) => {
+    res.render('accounts/import');
+});
+
+// POST /accounts/import → handle Excel upload & import
+router.post('/import', upload.single('file'), async (req, res) => {
+  if (!req.file) {
+    req.flash('error_msg', 'Please select an Excel file to upload');
+    return res.redirect('/accounts/import');
+  }
+
+  try {
+    // 1) Parse raw rows
+    let rows = await parseExcelBuffer(req.file.buffer);
+
+    // 2) Build owner-name → ObjectId map
+    const usersByName = {};
+    (await User.find().select('name')).forEach(u => {
+      usersByName[u.name] = u._id;
+    });
+
+    // 3) Normalize & validate each row
+    const accountsToInsert = rows.map(r => {
+      if (!usersByName[r.owner]) {
+        throw new Error(`Unknown owner name "${r.owner}"`);
+      }
+      // Ensure all required fields exist
+      const {
+        name,
+        type,
+        industry,
+        billing_street,
+        billing_city,
+        billing_state,
+        billing_code,
+        billing_country
+      } = r;
+
+      if (!name || !type || !industry ||
+          !billing_street || !billing_city ||
+          !billing_state || !billing_code || !billing_country) {
+        throw new Error(`Missing required field in row: ${JSON.stringify(r)}`);
+      }
+
+      return {
+        owner:          usersByName[r.owner],
+        name,
+        type,
+        industry,
+        billing_street,
+        billing_city,
+        billing_state,
+        billing_code,
+        billing_country
+      };
+    });
+
+    // 4) Bulk insert into Accounts collection
+    await Account.insertMany(accountsToInsert);
+
+    req.flash('success_msg', 'Accounts imported successfully');
+    res.redirect('/accounts');
+  } catch (err) {
+    console.error('Accounts import error:', err);
+    req.flash(
+      'error_msg',
+      err.message.startsWith('Unknown owner') || err.message.startsWith('Missing')
+        ? err.message
+        : 'Failed to import accounts from Excel'
+    );
+    res.redirect('/accounts/import');
   }
 });
 

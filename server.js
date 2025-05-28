@@ -9,13 +9,19 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const session = require('express-session');
 const flash   = require('connect-flash');
+const passport = require('passport');
+// require('./config/passport')(passport);
 
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false
 }));
+
 app.use(flash());
+
+app.use(passport.initialize());
+app.use(passport.session());
 
 // expose flash to all views
 app.use((req, res, next) => {
@@ -46,9 +52,10 @@ const contactRoutes = require('./routes/contacts');
 const leadRoutes = require('./routes/leads');
 const dealRoutes = require('./routes/deals');
 const accountRoutes = require('./routes/accounts');
+const userRoutes = require('./routes/users');
 
 // Routes
-app.use('/users', require('./routes/users'));
+app.use('/users', userRoutes);
 app.use('/contacts', contactRoutes);
 app.use('/leads', leadRoutes);
 app.use('/deals', dealRoutes);

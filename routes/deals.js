@@ -4,6 +4,12 @@ const Deal = require('../models/Deal');
 const User = require('../models/User');
 const Account = require('../models/Account');
 const Contact = require('../models/Contact');
+const Excel = require('exceljs');
+const multer = require('multer');
+const { parseExcelBuffer } = require('../utils/excelImporter');
+
+// Set up multer (in-memory storage)
+const upload = multer({ storage: multer.memoryStorage() });
 
 // GET /deals
 router.get('/', async (req, res) => {
@@ -135,6 +141,76 @@ router.post('/', async (req, res) => {
             probablity
         });
     }
+});
+
+// GET /deals/import → show Excel upload form
+router.get('/import', async (req, res) => {
+    res.render('deals/import');
+});
+
+// POST /deals/import → handle Excel upload and import
+router.post('/import', upload.single('file'), async (req, res) => {
+  if (!req.file) {
+    req.flash('error_msg', 'Please select an Excel file to upload');
+    return res.redirect('/deals/import');
+  }
+
+  try {
+    // 1) Parse raw rows
+    let rows = await parseExcelBuffer(req.file.buffer);
+
+    // 2) Build lookup maps by name → _id
+    const [allUsers, allAccounts, allContacts] = await Promise.all([
+      User.find().select('name'),
+      Account.find().select('name'),
+      Contact.find().select('name')
+    ]);
+
+    const usersByName    = Object.fromEntries(allUsers   .map(u => [u.name, u._id]));
+    const accountsByName = Object.fromEntries(allAccounts.map(a => [a.name, a._id]));
+    const contactsByName = Object.fromEntries(allContacts.map(c => [c.name, c._id]));
+
+    // 3) Normalize and validate each row
+    rows = rows.map(r => {
+      // Owner
+      if (!usersByName[r.owner]) {
+        throw new Error(`Unknown owner name "${r.owner}"`);
+      }
+      // Account
+      if (!accountsByName[r.account]) {
+        throw new Error(`Unknown account name "${r.account}"`);
+      }
+      // Contact Person
+      if (!contactsByName[r.contact_person]) {
+        throw new Error(`Unknown contact person name "${r.contact_person}"`);
+      }
+
+      return {
+        owner:          usersByName[r.owner],
+        name:           r.name,
+        account:        accountsByName[r.account],
+        contact_person: contactsByName[r.contact_person],
+        amount:         Number(r.amount) || 0,
+        due_date:       r.due_date ? new Date(r.due_date) : undefined,
+        probablity:     Number(r.probablity) || 0
+      };
+    });
+
+    // 4) Bulk insert
+    await Deal.insertMany(rows);
+
+    req.flash('success_msg', 'Deals imported successfully');
+    res.redirect('/deals');
+  } catch (err) {
+    console.error('Excel import error:', err);
+    req.flash(
+      'error_msg',
+      err.message.startsWith('Unknown')
+        ? err.message
+        : 'Failed to import deals from Excel'
+    );
+    res.redirect('/deals/import');
+  }
 });
 
 module.exports = router;

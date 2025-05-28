@@ -1,0 +1,36 @@
+<%- include('../partials/header') %>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-primary text-white">
+    <h2 class="card-title mb-0">Import Accounts from Excel</h2>
+  </div>
+  <div class="card-body">
+    <% if (typeof success_msg !== 'undefined' && success_msg && success_msg.length > 0) { %>
+      <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <%= success_msg %>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    <% } %>
+    <% if (typeof error_msg !== 'undefined' && error_msg && error_msg.length > 0) { %>
+      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <%= error_msg %>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    <% } %>
+
+    <form action="/accounts/import" method="POST" enctype="multipart/form-data">
+      <div class="mb-3">
+        <label for="fileInput" class="form-label">Select Excel file (.xlsx)</label>
+        <input type="file" name="file" id="fileInput" accept=".xlsx" class="form-control" required>
+        <div class="form-text">Please upload an Excel file with a .xlsx extension.</div>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-4">
+        <button type="submit" class="btn btn-success">Upload & Import</button>
+        <a href="/accounts" class="btn btn-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>
