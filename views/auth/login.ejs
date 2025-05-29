@@ -1,0 +1,65 @@
+<%- include('../partials/header') %>
+
+<div class="row justify-content-center mt-5 mb-5"> <%# Added mt-5 and mb-5 for better vertical centering/spacing %>
+    <div class="col-md-6 col-lg-5"> <%# Standardized column width for medium and large screens %>
+        <div class="card shadow-lg border-0"> <%# Stronger shadow and no default border for a cleaner look %>
+            <div class="card-header bg-primary text-white text-center py-3"> <%# Applied primary brand color, centered text, and added padding %>
+                <h2 class="card-title mb-0">Welcome Back to CRM</h2> <%# Clear, engaging title %>
+            </div>
+            <div class="card-body p-4"> <%# Increased padding for better content spacing %>
+                <%# Improved conditional checks for flash messages %>
+                <% if (typeof success_msg !== 'undefined' && success_msg && success_msg.length > 0) { %>
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <%= success_msg %>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                <% } %>
+                <% if (typeof error_msg !== 'undefined' && error_msg && error_msg.length > 0) { %>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <%= error_msg %>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                <% } %>
+                <% if (typeof errors !== 'undefined' && errors !== null && errors.length > 0) { %>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <ul class="mb-0 ps-3"> <%# List for multiple errors %>
+                            <% errors.forEach(err => { %>
+                                <li><%= err.msg %></li>
+                            <% }) %>
+                        </ul>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                <% } %>
+
+                <form action="/auth/login" method="POST">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email address</label> <%# Used form-label for accessibility %>
+                        <input name="email" type="email" class="form-control" id="email"
+                               value="<%= typeof email !== 'undefined' ? email : '' %>" <%# Retain email on error %>
+                               required autofocus> <%# Added ID and autofocus %>
+                    </div>
+                    <div class="mb-4"> <%# Increased margin for password field %>
+                        <label for="password" class="form-label">Password</label>
+                        <input name="password" type="password" class="form-control" id="password" required> <%# Added ID %>
+                    </div>
+
+                    <div class="d-grid gap-2"> <%# Makes button full width and adds gap for multiple buttons if needed %>
+                        <button type="submit" class="btn btn-primary btn-lg">Log In</button> <%# Larger primary button %>
+                    </div>
+
+                    <div class="text-center mt-3"> <%# Centered and added top margin %>
+                        <small class="text-muted">
+                            Don't have an account? <a href="/auth/register" class="text-decoration-none">Sign Up</a> <%# Link to register %>
+                        </small>
+                        <br>
+                        <small class="text-muted">
+                            <a href="/auth/forgot-password" class="text-decoration-none">Forgot Password?</a> <%# Link to forgot password %>
+                        </small>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/footer') %>

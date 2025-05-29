@@ -5,13 +5,14 @@ const User = require('../models/User');
 const Excel = require('exceljs');
 const multer = require('multer');
 const { parseExcelBuffer } = require('../utils/excelImporter');
+const { ensureAuthenticated, ensureRole } = require('../middleware/auth');
 
 // Set up multer (in-memory storage)
 const upload = multer({ storage: multer.memoryStorage() });
 
 
 // GET /accounts
-router.get('/', async (req, res) => {
+router.get('/', ensureAuthenticated, async (req, res) => {
   try {
     const accounts = await Account.find()
       .sort('-createdAt')
@@ -24,7 +25,7 @@ router.get('/', async (req, res) => {
 });
 
 // GET /accounts/new
-router.get('/new', async (req, res) => {
+router.get('/new', ensureAuthenticated, async (req, res) => {
   try {
     const users = await User.find().sort('name');
     res.render('accounts/new', {
@@ -47,7 +48,7 @@ router.get('/new', async (req, res) => {
 });
 
 // POST /accounts
-router.post('/', async (req, res) => {
+router.post('/', ensureAuthenticated, async (req, res) => {
   const {
     owner,
     name,
@@ -126,7 +127,7 @@ router.post('/', async (req, res) => {
 });
 
 // GET /accounts/import → show Excel upload form
-router.get('/import', async (req, res) => {
+router.get('/import', ensureAuthenticated, async (req, res) => {
     res.render('accounts/import');
 });
 
@@ -199,5 +200,89 @@ router.post('/import', upload.single('file'), async (req, res) => {
     res.redirect('/accounts/import');
   }
 });
+
+// GET /accounts/:id/edit  → show the edit form
+router.get('/:id/edit', ensureAuthenticated, ensureRole('admin',{ redirectBack: true }), async (req, res) => {
+  try {
+    const [account, users] = await Promise.all([
+      Account.findById(req.params.id),
+      User.find().sort('name')
+    ]);
+    if (!account) {
+      req.flash('error_msg', 'Account not found');
+      return res.redirect('/accounts');
+    }
+    res.render('accounts/edit', {
+      account,
+      users,
+      errors: []
+    });
+  } catch (err) {
+    console.error(err);
+    req.flash('error_msg', 'Server error');
+    res.redirect('/accounts');
+  }
+});
+
+// PUT /accounts/:id  → handle the edit form submit
+router.put('/:id', ensureAuthenticated, ensureRole('admin',{ redirectBack: true }), async (req, res) => {
+  const {
+    owner, name, type, industry,
+    billing_street, billing_city,
+    billing_state, billing_code,
+    billing_country
+  } = req.body;
+
+  let errors = [];
+  // validate required fields
+  if (!owner||!name||!type||!industry||
+      !billing_street||!billing_city||
+      !billing_state||!billing_code||!billing_country) {
+    errors.push({ msg: 'Please fill in all required fields.' });
+  }
+
+  if (errors.length) {
+    const users = await User.find().sort('name');
+    // re-render edit with errors
+    return res.render('accounts/edit', {
+      account: { _id: req.params.id, owner, name, type, industry,
+                 billing_street, billing_city,
+                 billing_state, billing_code,
+                 billing_country },
+      users,
+      errors
+    });
+  }
+
+  try {
+    await Account.findByIdAndUpdate(req.params.id, {
+      owner, name, type, industry,
+      billing_street, billing_city,
+      billing_state, billing_code,
+      billing_country
+    }, { new: true });
+
+    req.flash('success_msg', 'Account updated successfully');
+    res.redirect('/accounts');
+  } catch (err) {
+    console.error(err);
+    req.flash('error_msg', 'Error updating account');
+    res.redirect('/accounts');
+  }
+});
+
+// DELETE /accounts/:id
+router.delete('/:id/delete', ensureAuthenticated, ensureRole('admin',{ redirectBack: true }), async (req, res) => {
+  try {
+    await Account.findByIdAndDelete(req.params.id);
+    req.flash('success_msg', 'Account deleted successfully');
+    res.redirect('/accounts');
+  } catch (err) {
+    console.error(err);
+    req.flash('error_msg', 'Error deleting account');
+    res.redirect('/accounts');
+  }
+});
+
 
 module.exports = router;

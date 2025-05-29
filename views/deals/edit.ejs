@@ -1,0 +1,79 @@
+<%- include('../partials/header') %>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-primary text-white">
+    <h2 class="card-title mb-0">Edit Deal</h2>
+  </div>
+  <div class="card-body">
+    <% if (errors && errors.length) { %>
+      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <ul class="mb-0 ps-3">
+          <% errors.forEach(e => { %>
+            <li><%= e.msg %></li>
+          <% }) %>
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    <% } %>
+
+    <form action="/deals/<%= deal._id %>?_method=PUT" method="POST">
+      <div class="mb-3">
+        <label for="owner" class="form-label">Deal Owner</label>
+        <select name="owner" id="owner" class="form-select" required>
+          <% users.forEach(user => { %>
+            <option value="<%= user._id %>" <%= (deal.owner && deal.owner.toString() === user._id.toString()) ? 'selected' : '' %>><%= user.name %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label for="name" class="form-label">Deal Name</label>
+        <input type="text" class="form-control" id="name" name="name" required value="<%= deal.name %>">
+      </div>
+
+      <div class="mb-3">
+        <label for="account" class="form-label">Account Name</label>
+        <select name="account" id="account" class="form-select" required>
+          <% accounts.forEach(acc => { %>
+            <option value="<%= acc._id %>" <%= (deal.account && deal.account.toString() === acc._id.toString()) ? 'selected' : '' %>><%= acc.name %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label for="contact_person" class="form-label">Contact Person</label>
+        <select name="contact_person" id="contact_person" class="form-select" required>
+          <% contacts.forEach(ct => { %>
+            <option value="<%= ct._id %>" <%= (deal.contact_person && deal.contact_person.toString() === ct._id.toString()) ? 'selected' : '' %>><%= ct.name %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label for="amount" class="form-label">Amount</label>
+        <input type="number" class="form-control" name="amount" id="amount" min="0" step="0.01" required value="<%= deal.amount %>">
+      </div>
+
+      <div class="mb-3">
+        <label for="due_date" class="form-label">Closing Date</label>
+        <input type="date" class="form-control" name="due_date" id="due_date" value="<%= deal.due_date.toISOString().split('T')[0] %>">
+      </div>
+
+      <div class="mb-3">
+        <label for="probablity" class="form-label">Probability (%)</label>
+        <select name="probablity" id="probablity" class="form-select" required>
+          <% [0,10,20,40,60,75,90,100].forEach(p => { %>
+            <option value="<%= p %>" <%= deal.probablity === p ? 'selected' : '' %>><%= p %>%</option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-4">
+        <button type="submit" class="btn btn-success">Update</button>
+        <a href="/deals" class="btn btn-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

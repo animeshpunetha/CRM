@@ -5,14 +5,15 @@ const User = require('../models/User');
 const Excel = require('exceljs');
 const multer = require('multer');
 const { parseExcelBuffer } = require('../utils/excelImporter');
+const { ensureAuthenticated, ensureRole } = require('../middleware/auth');
 
 // Set up multer (in-memory storage)
 const upload = multer({ storage: multer.memoryStorage() });
 
 // GET /leads → list all leads
-router.get('/', async (req, res) => {
+router.get('/', ensureAuthenticated, async (req, res) => {
     try {
-        const leads = await Lead.find().sort('-createdAt');
+        const leads = await Lead.find().sort('-createdAt').populate('owner');
         res.render('leads/index', { leads });
     } catch (err) {
         console.error(err);
@@ -21,7 +22,7 @@ router.get('/', async (req, res) => {
 });
 
 // GET /leads/new → render form to add a new lead
-router.get('/new', async (req, res) => {
+router.get('/new', ensureAuthenticated, async (req, res) => {
     try {
         const users = await User.find().sort('name');
         res.render('leads/new', {
@@ -40,7 +41,7 @@ router.get('/new', async (req, res) => {
 });
 
 // POST /leads → handle form submission and create a new lead
-router.post('/', async (req, res) => {
+router.post('/', ensureAuthenticated, async (req, res) => {
     const { owner, name, company, email, phone, description } = req.body;
     let errors = [];
 
@@ -83,12 +84,12 @@ router.post('/', async (req, res) => {
 });
 
 // GET /leads/import → show Excel upload form
-router.get('/import', async (req, res) => {
+router.get('/import', ensureAuthenticated, async (req, res) => {
     res.render('leads/import');
 });
 
 // POST /leads/import → handle Excel upload and import
-router.post('/import', upload.single('file'), async (req, res) => {
+router.post('/import', ensureAuthenticated, upload.single('file'), async (req, res) => {
   if (!req.file) {
     req.flash('error_msg', 'Please select an Excel file to upload');
     return res.redirect('/leads/import');
@@ -132,5 +133,83 @@ router.post('/import', upload.single('file'), async (req, res) => {
     res.redirect('/leads/import');
   }
 });
+
+// GET /leads/:id/edit → render edit form
+router.get('/:id/edit', ensureAuthenticated, async (req, res) => {
+  try {
+    const lead = await Lead.findById(req.params.id).populate('owner');
+    if (!lead) return res.status(404).send('Lead not found');
+
+    const users = await User.find().sort('name');
+    res.render('leads/edit', {
+      users,
+      errors: [],
+      lead
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
+});
+
+
+// PUT /leads/:id/edit → update lead
+router.put('/:id/edit', ensureAuthenticated, async (req, res) => {
+  const { owner, name, company, email, phone, description } = req.body;
+  let errors = [];
+
+  if (!owner || !name || !company || !email || !phone) {
+    errors.push({ msg: 'Please fill in all required fields.' });
+  }
+
+  try {
+    const users = await User.find().sort('name');
+    const lead = await Lead.findById(req.params.id).populate('owner');
+    if (!lead) return res.status(404).send('Lead not found');
+
+    if (errors.length) {
+      return res.render('leads/edit', {
+        users,
+        errors,
+        _id: req.params.id,
+        owner,
+        name,
+        company,
+        email,
+        phone,
+        description
+      });
+    }
+
+    lead.owner = owner;
+    lead.name = name;
+    lead.company = company;
+    lead.email = email;
+    lead.phone = phone;
+    lead.description = description;
+    await lead.save();
+
+    req.flash('success_msg', 'Lead updated successfully');
+    res.redirect('/leads');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
+});
+
+
+// DELETE /leads/:id/delete → delete lead
+router.delete('/:id/delete', ensureAuthenticated, ensureRole('admin',{ redirectBack: true }), async (req, res) => {
+  try {
+    await Lead.findByIdAndDelete(req.params.id);
+    req.flash('success_msg', 'Lead deleted successfully');
+    res.redirect('/leads');
+  } catch (err) {
+    console.error(err);
+    req.flash('error_msg', 'Failed to delete lead');
+    res.redirect('/leads');
+  }
+});
+
 
 module.exports = router;

@@ -5,16 +5,18 @@
 /* Apply a clean, modern font and a soft background to the entire page */
 body {
     font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f0f2f5; /* A soft, light grey-blue for the page background */
-    color: #343a40; /* Dark grey for general text, ensuring excellent readability */
+    background-color: #f8fafd; /* Very light, slightly cool background for brightness */
+    color: #343a40; /* Dark grey for general text, ensures excellent readability */
     line-height: 1.6; /* Improves line spacing for better text flow */
+    -webkit-font-smoothing: antialiased; /* Smoother font rendering */
+    -moz-osx-font-smoothing: grayscale; /* Smoother font rendering */
 }
 
 /* Base styles for anchors (links) */
 a {
     color: var(--primary-brand-color); /* Uses your brand color for all links */
     text-decoration: none; /* Removes the default underline */
-    transition: color 0.2s ease-in-out; /* Smooth transition when hovering over links */
+    transition: color 0.2s ease-in-out, text-decoration 0.2s ease-in-out; /* Smooth transitions */
 }
 
 a:hover {
@@ -31,6 +33,8 @@ a:hover {
     --primary-brand-color: #20549c; /* Your main brand blue */
     --primary-brand-color-dark: #1a457d; /* A darker shade for hover/active states */
     --primary-brand-color-light: #2c72b8; /* A lighter shade for potential accents or subtle highlights */
+    --secondary-bg-light: #f2f5f9; /* A softer light grey for backgrounds */
+    --border-color-light: #e0e6ec; /* A light border color */
 }
 
 /*------------------------------------*\
@@ -39,37 +43,46 @@ a:hover {
 
 .navbar {
     background-color: var(--primary-brand-color) !important; /* Applies your brand color to the navbar background */
+    /* If using bg-gradient in EJS, this will add a subtle gradient effect */
+    background-image: linear-gradient(180deg, var(--primary-brand-color-light), var(--primary-brand-color)) !important;
     margin-bottom: 2rem; /* Provides consistent spacing below the navbar */
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Adds a subtle shadow for visual depth */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15); /* Stronger, more prominent shadow for the top bar */
 }
 
 .navbar-brand {
     font-weight: 700; /* Sets a bold font for the CRM brand name */
-    font-size: 1.65rem; /* Slightly increases the brand text size */
+    font-size: 1.75rem; /* Slightly increases the brand text size for more presence */
     color: #ffffff; /* Ensures the brand text is white for contrast */
+    letter-spacing: 0.05rem; /* Adds a subtle letter spacing for a refined look */
 }
 
 .navbar-nav .nav-link {
     font-weight: 400; /* Regular font weight for navigation links */
-    color: rgba(255, 255, 255, 0.9); /* Slightly transparent white for a softer appearance */
-    transition: color 0.2s ease-in-out; /* Smooth transition for link hover effects */
-    padding-left: 1rem; /* Adjusts horizontal padding for navigation links */
-    padding-right: 1rem;
+    color: rgba(255, 255, 255, 0.85); /* Slightly transparent white for a softer appearance */
+    transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out; /* Smooth transitions */
+    padding: 0.5rem 1rem; /* Adjusts padding for navigation links */
+    border-radius: 0.3rem; /* Small border-radius for nav links */
 }
 
 .navbar-nav .nav-link:hover,
 .navbar-nav .nav-link.active { /* Highlights active navigation links and hover states */
     color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.15); /* Subtle highlight on hover/active */
     text-decoration: none; /* Ensures no underline appears on hover/active for nav links */
 }
 
 /* Ensures the mobile toggler icon is clearly visible against the dark background */
 .navbar-toggler {
-    border-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3); /* Slightly more visible border */
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+.navbar-toggler:focus {
+    box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.25); /* Glow effect on focus */
 }
 
 .navbar-toggler-icon {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.8%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.9%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e"); /* Brighter toggler icon */
 }
 
 /*------------------------------------*\
@@ -78,23 +91,41 @@ a:hover {
 
 .container {
     background-color: #ffffff; /* Sets a white background for the main content area */
-    border-radius: 10px; /* Applies gently rounded corners to the container */
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); /* Adds a soft, subtle shadow for visual depth */
-    padding: 30px; /* Provides generous internal padding for content */
-    margin-top: 2rem; /* Ensures consistent top margin from the navbar */
-    margin-bottom: 2rem; /* Ensures consistent bottom margin */
+    border-radius: 12px; /* Slightly more rounded corners for a softer feel */
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08); /* A softer, more diffused shadow for depth */
+    padding: 35px; /* Provides more generous internal padding for content */
+    margin-top: 2.5rem; /* Slightly increased top margin for better separation */
+    margin-bottom: 2.5rem; /* Consistent bottom margin */
+    border: 1px solid var(--border-color-light); /* Adds a subtle light border */
+}
+
+/* Card General Styling */
+.card {
+    border: 1px solid var(--border-color-light); /* Light border for cards */
+    border-radius: 10px; /* Rounded corners for cards */
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); /* Subtle shadow for individual cards */
 }
 
 /* Card Headers with primary color */
 .card-header.bg-primary {
     background-color: var(--primary-brand-color) !important; /* Applies brand color to card headers */
+    background-image: linear-gradient(45deg, var(--primary-brand-color-light), var(--primary-brand-color)) !important; /* Subtle gradient */
     color: #ffffff; /* Ensures text inside primary card headers is white */
+    border-top-left-radius: 9px !important; /* Adjust border-radius to match card */
+    border-top-right-radius: 9px !important; /* Adjust border-radius to match card */
+    padding: 1.25rem 1.5rem; /* More padding for header */
 }
 
 .card-header.bg-primary h2,
 .card-header.bg-primary .btn-light { /* Styles headings and light buttons within primary card headers */
     color: #ffffff; /* Sets text color to white for better contrast */
 }
+
+/* Card Body padding */
+.card-body {
+    padding: 1.5rem; /* Consistent padding inside card bodies */
+}
+
 
 /*------------------------------------*\
   #TYPOGRAPHY & HEADINGS
@@ -103,11 +134,11 @@ a:hover {
 h2, h3, h4 {
     font-weight: 700; /* Bolder font weight for headings for better impact */
     margin-bottom: 1.5rem; /* Consistent spacing below headings */
-    color: #343a40; /* Ensures headings have strong, readable dark grey color */
+    color: #212529; /* A darker, almost black color for headings for strong presence */
 }
 
 .card-title {
-    font-size: 1.5rem; /* Adjusts font size for card titles */
+    font-size: 1.6rem; /* Slightly larger font size for card titles */
     font-weight: 600; /* Medium-bold font weight for card titles */
 }
 
@@ -125,15 +156,16 @@ h2, h3, h4 {
 .form-select,
 textarea.form-control { /* Applies consistent styling to various form input types */
     border-radius: 0.375rem; /* Standard Bootstrap border-radius for consistency */
-    border: 1px solid #ced4da; /* Default Bootstrap border color */
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.075); /* Subtle inner shadow for depth */
+    border: 1px solid var(--border-color-light); /* Light border color for inputs */
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.05); /* Subtle inner shadow for depth */
+    padding: 0.65rem 1rem; /* Slightly more padding for input fields */
 }
 
 .form-control:focus,
 .form-select:focus,
 textarea.form-control:focus {
-    border-color: rgba(32, 84, 156, 0.5); /* Brand color with transparency on focus */
-    box-shadow: 0 0 0 0.25rem rgba(32, 84, 156, 0.25); /* Brand color glowing effect on focus */
+    border-color: rgba(32, 84, 156, 0.7); /* Stronger brand color on focus */
+    box-shadow: 0 0 0 0.25rem rgba(32, 84, 156, 0.35); /* More prominent brand color glowing effect on focus */
 }
 
 .form-text {
@@ -147,37 +179,39 @@ textarea.form-control:focus {
 
 .table {
     background-color: #ffffff; /* White background for tables */
-    border-radius: 0.5rem; /* Slightly rounded table corners */
+    border-radius: 0.75rem; /* More rounded table corners for a softer look */
     overflow: hidden; /* Ensures rounded corners are visible, especially with borders */
+    border: 1px solid var(--border-color-light); /* Subtle border around the table */
 }
 
 .table th,
 .table td {
     vertical-align: middle; /* Vertically aligns content in table cells */
-    padding: 0.75rem 1rem; /* Slightly more padding for table cells */
+    padding: 1rem 1.2rem; /* More padding for table cells for better spacing */
 }
 
 .table-hover tbody tr:hover {
-    background-color: #f2f5f9; /* Lighter background on row hover */
+    background-color: var(--secondary-bg-light); /* Lighter background on row hover */
 }
 
 .table-striped tbody tr:nth-of-type(odd) {
-    background-color: #fcfdfe; /* Very subtle stripe for odd rows */
+    background-color: #fcfdfe; /* Very subtle stripe for odd rows, almost imperceptible */
 }
 
 .table-light { /* Styling for table header (thead) */
     background-color: #e9ecef; /* Standard Bootstrap light header background */
     color: #495057; /* Darker text color for table headers */
     font-weight: 600; /* Medium-bold font for table headers */
+    border-bottom: 2px solid var(--border-color-light); /* More pronounced border below header */
 }
 
 /* Badges (used for roles, etc.) */
 .badge {
-    padding: 0.4em 0.7em; /* Slightly more padding for badges */
+    padding: 0.45em 0.8em; /* Slightly more padding for badges */
     font-weight: 600; /* Bold font for badge text */
-    font-size: 0.75em; /* Smaller font size for badges */
+    font-size: 0.8em; /* Slightly larger font size for badges */
     vertical-align: middle; /* Vertically aligns badges */
-    border-radius: 0.25rem; /* Standard Bootstrap border-radius for badges */
+    border-radius: 0.3rem; /* Consistent border-radius for badges */
 }
 
 /*------------------------------------*\
@@ -187,17 +221,28 @@ textarea.form-control:focus {
 .btn {
     font-weight: 500; /* Medium font weight for buttons */
     transition: all 0.2s ease-in-out; /* Smooth transitions for all button states */
-    border-radius: 0.375rem; /* Consistent border-radius for buttons */
+    border-radius: 0.4rem; /* Slightly more rounded corners for buttons */
+    padding: 0.6rem 1.2rem; /* Consistent padding for buttons */
 }
 
 /* Primary buttons (using your brand color) */
 .btn-primary {
     background-color: var(--primary-brand-color) !important;
     border-color: var(--primary-brand-color) !important;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow for primary buttons */
 }
 .btn-primary:hover {
     background-color: var(--primary-brand-color-dark) !important;
     border-color: var(--primary-brand-color-dark) !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); /* Enhanced shadow on hover */
+    transform: translateY(-1px); /* Slight lift effect */
+}
+
+/* Small buttons (used in table actions) */
+.btn-sm {
+    padding: 0.3rem 0.6rem; /* Standard Bootstrap small button padding */
+    font-size: 0.85rem;
+    border-radius: 0.3rem;
 }
 
 /* Specific styling for the 'New Lead'/'New Account' buttons within card headers */
@@ -205,16 +250,20 @@ textarea.form-control:focus {
     color: var(--primary-brand-color); /* Text color matches the brand blue */
     background-color: #f8f9fa; /* A very light background */
     border-color: #f8f9fa;
+    font-weight: 600; /* Bolder text for these action buttons */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); /* Subtle shadow for action buttons */
 }
 .card-header .btn-light:hover {
     color: var(--primary-brand-color-dark); /* Darker brand blue on hover */
-    background-color: #e2e6ea; /* Slightly darker background on hover */
-    border-color: #e2e6ea;
+    background-color: #e9ecef; /* Slightly darker background on hover */
+    border-color: #e9ecef;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); /* Enhanced shadow on hover */
+    transform: translateY(-0.5px); /* Slight lift effect */
 }
 
 /* Customizing Bootstrap's default button colors for consistency */
 .btn-success {
-    background-color: #28a745 !important; /* Standard Bootstrap success green */
+    background-color: #28a745 !important;
     border-color: #28a745 !important;
 }
 .btn-success:hover {
@@ -223,7 +272,7 @@ textarea.form-control:focus {
 }
 
 .btn-warning {
-    background-color: #ffc107 !important; /* Standard Bootstrap warning yellow */
+    background-color: #ffc107 !important;
     border-color: #ffc107 !important;
     color: #212529; /* Ensures dark text for readability on yellow background */
 }
@@ -233,7 +282,7 @@ textarea.form-control:focus {
 }
 
 .btn-danger {
-    background-color: #dc3545 !important; /* Standard Bootstrap danger red */
+    background-color: #dc3545 !important;
     border-color: #dc3545 !important;
 }
 .btn-danger:hover {
@@ -241,7 +290,7 @@ textarea.form-control:focus {
     border-color: #bd2130 !important;
 }
 
-.btn-info { /* Standard Bootstrap info blue (for 'View' buttons) */
+.btn-info {
     background-color: #17a2b8 !important;
     border-color: #17a2b8 !important;
     color: #ffffff; /* White text for contrast */
@@ -252,7 +301,7 @@ textarea.form-control:focus {
 }
 
 .btn-secondary {
-    background-color: #6c757d !important; /* Standard Bootstrap secondary grey */
+    background-color: #6c757d !important;
     border-color: #6c757d !important;
 }
 .btn-secondary:hover {
@@ -266,16 +315,26 @@ textarea.form-control:focus {
 
 .alert {
     font-size: 0.9rem; /* Slightly smaller font for alerts */
-    padding: 0.75rem 1.25rem; /* Standard Bootstrap padding for alerts */
+    padding: 0.85rem 1.25rem; /* More generous padding for alerts */
     border-radius: 0.375rem; /* Consistent border-radius */
-    margin-bottom: 1.5rem; /* Consistent spacing below alerts */
+    margin-bottom: 1.75rem; /* More consistent spacing below alerts */
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05); /* Subtle shadow for alerts */
 }
 
 /* For alert lists (like validation errors) */
 .alert ul {
     list-style-type: disc; /* Uses discs for list items within alerts */
     margin-left: 1.5rem; /* Indents list items for readability */
+    padding-left: 0; /* Remove default padding for ul */
 }
+
+/* Adjust close button position for alerts */
+.alert .btn-close {
+    font-size: 0.8rem;
+    padding: 0.25rem;
+    margin: -0.4rem -0.4rem -0.4rem auto; /* Adjust margin to pull it into place */
+}
+
 
 /*------------------------------------*\
   #UTILITIES & MISC
@@ -290,4 +349,17 @@ td.text-nowrap form {
 td.text-nowrap .btn:not(:last-child),
 td.text-nowrap form:not(:last-child) {
     margin-right: 0.5rem; /* Adds space between buttons/forms in the same cell */
+}
+
+/* General spacing for elements within cards, forms, etc. */
+.mb-3 { margin-bottom: 1rem !important; }
+.mb-4 { margin-bottom: 1.5rem !important; }
+.mb-5 { margin-bottom: 3rem !important; } /* If you use mb-5 anywhere */
+.mt-3 { margin-top: 1rem !important; }
+.mt-4 { margin-top: 1.5rem !important; }
+.mt-5 { margin-top: 3rem !important; }
+
+/* Remove default horizontal scroll for html/body if present */
+html, body {
+    overflow-x: hidden;
 }

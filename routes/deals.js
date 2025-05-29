@@ -7,12 +7,13 @@ const Contact = require('../models/Contact');
 const Excel = require('exceljs');
 const multer = require('multer');
 const { parseExcelBuffer } = require('../utils/excelImporter');
+const { ensureAuthenticated, ensureRole } = require('../middleware/auth');
 
 // Set up multer (in-memory storage)
 const upload = multer({ storage: multer.memoryStorage() });
 
 // GET /deals
-router.get('/', async (req, res) => {
+router.get('/', ensureAuthenticated, async (req, res) => {
     try {
         const deals = await Deal.find()
             .sort('-createdAt')
@@ -27,7 +28,7 @@ router.get('/', async (req, res) => {
 });
 
 // GET /deals/new
-router.get('/new', async (req, res) => {
+router.get('/new', ensureAuthenticated, async (req, res) => {
     try {
         const [users, accounts, contacts] = await Promise.all([
             User.find().sort('name'),
@@ -54,7 +55,7 @@ router.get('/new', async (req, res) => {
 });
 
 // POST /deals
-router.post('/', async (req, res) => {
+router.post('/', ensureAuthenticated, async (req, res) => {
     const {
         owner,
         name,
@@ -144,12 +145,12 @@ router.post('/', async (req, res) => {
 });
 
 // GET /deals/import → show Excel upload form
-router.get('/import', async (req, res) => {
+router.get('/import', ensureAuthenticated, async (req, res) => {
     res.render('deals/import');
 });
 
 // POST /deals/import → handle Excel upload and import
-router.post('/import', upload.single('file'), async (req, res) => {
+router.post('/import', ensureAuthenticated, upload.single('file'), async (req, res) => {
   if (!req.file) {
     req.flash('error_msg', 'Please select an Excel file to upload');
     return res.redirect('/deals/import');
@@ -212,5 +213,97 @@ router.post('/import', upload.single('file'), async (req, res) => {
     res.redirect('/deals/import');
   }
 });
+
+// GET /deals/:id/edit → show the edit form
+router.get('/:id/edit', ensureAuthenticated, ensureRole('admin',{ redirectBack: true }), async (req, res) => {
+  try {
+    const deal = await Deal.findById(req.params.id);
+    const [users, accounts, contacts] = await Promise.all([
+      User.find().sort('name'),
+      Account.find().sort('name'),
+      Contact.find().sort('name')
+    ]);
+
+    if (!deal) {
+      req.flash('error_msg', 'Deal not found');
+      return res.redirect('/deals');
+    }
+
+    res.render('deals/edit', {
+      deal,
+      users,
+      accounts,
+      contacts,
+      errors: []
+    });
+  } catch (err) {
+    console.error(err);
+    req.flash('error_msg', 'Error loading deal for editing');
+    res.redirect('/deals');
+  }
+});
+
+
+// PUT /deals/:id → update deal
+router.put('/:id', ensureAuthenticated, ensureRole('admin',{ redirectBack: true }), async (req, res) => {
+  const { owner, name, account, contact_person, amount, due_date, probablity } = req.body;
+
+  let errors = [];
+
+  if (!owner || !name || !account || !contact_person || amount == null || probablity == null) {
+    errors.push({ msg: 'Please fill in all required fields.' });
+  }
+
+  try {
+    const [users, accounts, contacts] = await Promise.all([
+      User.find().sort('name'),
+      Account.find().sort('name'),
+      Contact.find().sort('name')
+    ]);
+
+    if (errors.length) {
+      const deal = await Deal.findById(req.params.id);
+      return res.render('deals/edit', {
+        deal,
+        users,
+        accounts,
+        contacts,
+        errors
+      });
+    }
+
+    await Deal.findByIdAndUpdate(req.params.id, {
+      owner,
+      name,
+      account,
+      contact_person,
+      amount,
+      due_date,
+      probablity
+    });
+
+    req.flash('success_msg', 'Deal updated successfully');
+    res.redirect('/deals');
+  } catch (err) {
+    console.error(err);
+    req.flash('error_msg', 'Error updating deal');
+    res.redirect('/deals');
+  }
+});
+
+
+// DELETE /deals/:id → delete deal
+router.delete('/:id', ensureAuthenticated, ensureRole('admin',{ redirectBack: true }), async (req, res) => {
+  try {
+    await Deal.findByIdAndDelete(req.params.id);
+    req.flash('success_msg', 'Deal deleted successfully');
+    res.redirect('/deals');
+  } catch (err) {
+    console.error(err);
+    req.flash('error_msg', 'Error deleting deal');
+    res.redirect('/deals');
+  }
+});
+
 
 module.exports = router;

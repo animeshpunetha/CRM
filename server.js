@@ -3,33 +3,18 @@ dotenv.config();
 
 const express = require('express');
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
-const path = require('path');
-const app = express();
-const PORT = process.env.PORT || 3000;
 const session = require('express-session');
 const flash   = require('connect-flash');
 const passport = require('passport');
-// require('./config/passport')(passport);
+const path = require('path');
+const bodyParser = require('body-parser');
+const methodOverride = require('method-override');
 
-app.use(session({
-  secret: process.env.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: false
-}));
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-app.use(flash());
-
-app.use(passport.initialize());
-app.use(passport.session());
-
-// expose flash to all views
-app.use((req, res, next) => {
-  res.locals.success_msg = req.flash('success_msg');
-  res.locals.error_msg   = req.flash('error_msg');
-  res.locals.errors      = req.flash('errors');
-  next();
-});
+//Passport config
+require('./config/passport')(passport);
 
 //MongoDB connection
 mongoose.connect(process.env.MONGODB_URI, {
@@ -39,32 +24,57 @@ mongoose.connect(process.env.MONGODB_URI, {
     console.log('MongoDB connected');
 }).catch(err=> console.log(err));
 
-//Middleware
-app.use(express.json());
-app.use(bodyParser.urlencoded({extended : true}));
-app.use(express.static(path.join(__dirname, 'public')));
-
 // View Engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-const contactRoutes = require('./routes/contacts');
-const leadRoutes = require('./routes/leads');
-const dealRoutes = require('./routes/deals');
-const accountRoutes = require('./routes/accounts');
-const userRoutes = require('./routes/users');
+// Bodyparser & static
+app.use(express.json());
+app.use(bodyParser.urlencoded({extended : true}));
+app.use(methodOverride('_method'));
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Routes
-app.use('/users', userRoutes);
-app.use('/contacts', contactRoutes);
-app.use('/leads', leadRoutes);
-app.use('/deals', dealRoutes);
-app.use('/accounts', accountRoutes);
+// Sessions
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false
+}));
 
-//Home route
-app.get('/', (req,res)=>{
-    res.send('CRM App Home Page');
+// Passport middlewares
+app.use(passport.initialize());
+app.use(passport.session());
+
+// flash message
+app.use(flash());
+
+// expose flash to all views
+app.use((req, res, next) => {
+  res.locals.user        = req.user;
+  res.locals.success_msg = req.flash('success_msg');
+  res.locals.error_msg   = req.flash('error_msg');
+  res.locals.errors      = req.flash('errors');
+  next();
 });
+
+if (!process.env.MAIL_USER || !process.env.MAIL_PASS) {
+  console.warn('⚠️  MAIL_USER or MAIL_PASS not set. Password reset emails will fail.');
+}
+
+// Auth & Guard middlewares
+app.use('/auth', require('./routes/auth'));
+// PROTECTED routes
+const { ensureAuthenticated } = require('./middleware/auth');
+
+
+
+// Redirect root to /dashboard if someone hits '/'
+app.use('/users',    ensureAuthenticated, require('./routes/users'));
+app.use('/contacts', ensureAuthenticated, require('./routes/contacts'));
+app.use('/leads',    ensureAuthenticated, require('./routes/leads'));
+app.use('/deals',    ensureAuthenticated, require('./routes/deals'));
+app.use('/accounts', ensureAuthenticated, require('./routes/accounts'));
+
 
 //Start Server
 app.listen(PORT,()=>{

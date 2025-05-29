@@ -5,6 +5,8 @@ const UserSchema = new Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true }, // hash before save
   role: { type: String, enum: ['admin', 'user'], default: 'user' },
+  resetPasswordToken:   String,
+  resetPasswordExpires: Date,
   createdAt: { type: Date, default: Date.now }
 });
 

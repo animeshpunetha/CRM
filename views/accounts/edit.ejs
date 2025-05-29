@@ -1,0 +1,86 @@
+<%- include('../partials/header') %>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-primary text-white">
+    <h2 class="card-title mb-0">Edit Account</h2>
+  </div>
+  <div class="card-body">
+    <% if (errors && errors.length) { %>
+      <div class="alert alert-danger">
+        <ul>
+          <% errors.forEach(e => { %><li><%= e.msg %></li><% }) %>
+        </ul>
+      </div>
+    <% } %>
+
+    <form action="/accounts/<%= account._id %>?_method=PUT" method="POST">
+      <div class="mb-3">
+        <label for="owner" class="form-label">Account Owner</label>
+        <select name="owner" id="owner" class="form-select" required>
+          <option value="">-- Select Owner --</option>
+          <% users.forEach(user => { %>
+            <option value="<%= user._id %>"
+              <%= account.owner.toString() === user._id.toString() ? 'selected' : '' %>>
+              <%= user.name %>
+            </option>
+          <% }) %>
+        </select>
+      </div>
+
+      <!-- The rest of the fields mirror new.ejs but pre-filled -->
+      <div class="mb-3">
+        <label for="name" class="form-label">Account Name</label>
+        <input name="name" id="name" type="text" class="form-control"
+               value="<%= account.name %>" required>
+      </div>
+      <div class="mb-3">
+        <label for="type" class="form-label">Account Type</label>
+        <input name="type" id="type" type="text" class="form-control"
+               value="<%= account.type %>" required>
+      </div>
+      <div class="mb-3">
+        <label for="industry" class="form-label">Industry</label>
+        <input name="industry" id="industry" type="text" class="form-control"
+               value="<%= account.industry %>" required>
+      </div>
+
+      <h5 class="mt-4 mb-3">Billing Address</h5>
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label for="billing_street" class="form-label">Street</label>
+          <input name="billing_street" id="billing_street" type="text" class="form-control"
+                 value="<%= account.billing_street %>" required>
+        </div>
+        <div class="col-md-6 mb-3">
+          <label for="billing_city" class="form-label">City</label>
+          <input name="billing_city" id="billing_city" type="text" class="form-control"
+                 value="<%= account.billing_city %>" required>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label for="billing_state" class="form-label">State</label>
+          <input name="billing_state" id="billing_state" type="text" class="form-control"
+                 value="<%= account.billing_state %>" required>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label for="billing_code" class="form-label">Postal Code</label>
+          <input name="billing_code" id="billing_code" type="text" class="form-control"
+                 value="<%= account.billing_code %>" required>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label for="billing_country" class="form-label">Country</label>
+          <input name="billing_country" id="billing_country" type="text" class="form-control"
+                 value="<%= account.billing_country %>" required>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-4">
+        <button type="submit" class="btn btn-success">Update Account</button>
+        <a href="/accounts" class="btn btn-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>
