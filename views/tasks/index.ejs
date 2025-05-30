@@ -1,0 +1,53 @@
+<%- include('../partials/header') %>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+    <h2 class="card-title mb-0">To-Do List</h2>
+    <a class="btn btn-light" href="/tasks/new">Add Task</a>
+  </div>
+  <div class="card-body">
+    <% if (tasks && tasks.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table table-hover table-striped">
+          <thead class="table-light">
+            <tr>
+              <th>Title</th>
+              <th>Status</th>
+              <th>Due Date</th>
+              <th>Priority</th>
+              <th>Description</th>
+              <th>Assigned By</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% tasks.forEach(task => { %>
+              <tr>
+                <td><%= task.title %></td>
+                <td><%= task.status %></td>
+                <td><%= task.due_date?.toDateString() %></td>
+                <td><%= task.priority %></td>
+                <td><%= task.description %></td>
+                <td><%= task.assigned_by?.name %></td>
+                <td>
+                  <a href="/tasks/<%= task._id %>/edit" class="btn btn-sm btn-warning me-2">Edit</a>
+                  <form action="/tasks/<%= task._id %>/delete" method="POST" class="d-inline">
+                    <button class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this task?')">Delete</button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <div class="alert alert-info" role="alert">
+        No tasks available. Click "Add Task" to get started!
+      </div>
+    <% } %>
+  </div>
+  <div class="card-footer text-end">
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

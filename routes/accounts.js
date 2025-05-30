@@ -7,24 +7,33 @@ const multer = require('multer');
 const { parseExcelBuffer } = require('../utils/excelImporter');
 const { ensureAuthenticated, ensureRole } = require('../middleware/auth');
 
-// Set up multer (in-memory storage)
+// (A) Set up multer (in-memory storage)
 const upload = multer({ storage: multer.memoryStorage() });
 
 
-// GET /accounts
+// (N) GET /accounts
 router.get('/', ensureAuthenticated, async (req, res) => {
   try {
+    // get the sort fields and order from query parameters
+
+    const sortField = req.query.sort || 'createdAt';
+    const sortOrder = req.query.order === 'asc' ? 1 : -1;
+
+    // construct dynamic sort 
+    const sortOptions = {};
+    sortOptions[sortField] = sortOrder;
+
     const accounts = await Account.find()
-      .sort('-createdAt')
+      .sort(sortOptions).collation({ locale: 'en', strength: 2 })
       .populate('owner', 'name');
-    res.render('accounts/index', { accounts });
+    res.render('accounts/index', { accounts, currentSort: sortField, currentOrder: sortOrder === 1 ? 'asc' : 'desc' });
   } catch (err) {
     console.error(err);
     res.status(500).send('Server Error');
   }
 });
 
-// GET /accounts/new
+// (I) GET /accounts/new
 router.get('/new', ensureAuthenticated, async (req, res) => {
   try {
     const users = await User.find().sort('name');
@@ -47,7 +56,7 @@ router.get('/new', ensureAuthenticated, async (req, res) => {
   }
 });
 
-// POST /accounts
+// (M) POST /accounts
 router.post('/', ensureAuthenticated, async (req, res) => {
   const {
     owner,
@@ -126,12 +135,12 @@ router.post('/', ensureAuthenticated, async (req, res) => {
   }
 });
 
-// GET /accounts/import → show Excel upload form
+// (E) GET /accounts/import → show Excel upload form
 router.get('/import', ensureAuthenticated, async (req, res) => {
     res.render('accounts/import');
 });
 
-// POST /accounts/import → handle Excel upload & import
+// (S) POST /accounts/import → handle Excel upload & import
 router.post('/import', upload.single('file'), async (req, res) => {
   if (!req.file) {
     req.flash('error_msg', 'Please select an Excel file to upload');
@@ -184,7 +193,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
       };
     });
 
-    // 4) Bulk insert into Accounts collection
+    // (H) Bulk insert into Accounts collection
     await Account.insertMany(accountsToInsert);
 
     req.flash('success_msg', 'Accounts imported successfully');
@@ -280,6 +289,80 @@ router.delete('/:id/delete', ensureAuthenticated, ensureRole('admin',{ redirectB
   } catch (err) {
     console.error(err);
     req.flash('error_msg', 'Error deleting account');
+    res.redirect('/accounts');
+  }
+});
+
+// Export the data into xlsx format
+// GET /accounts/export → send all deals as an Excel file
+router.get('/export', ensureAuthenticated, async (req, res) => {
+  try {
+    // 1) Fetch & populate your data
+    const accounts = await Account.find()
+      .populate('owner', 'name');
+
+    // 2) Build a new workbook and worksheet
+    const wb = new Excel.Workbook();
+    const ws = wb.addWorksheet('Accounts');
+
+    // 3) Define your columns (header / key / width)
+    ws.columns = [
+      { header: 'Account Owner', key: 'owner', width: 25 },
+      { header: 'Account Name', key: 'name', width: 30 },
+      { header: 'Account Type', key: 'type', width: 25 },
+      { header: 'Industry', key: 'industry', width: 30 },
+      { header: 'Billing Street', key: 'billing_street', width: 30 },
+      { header: 'Billing City', key: 'billing_city', width: 30 },
+      { header: 'Billing State', key: 'billing_state', width: 30 },
+      { header: 'Billing Country', key: 'billing_country', width: 30 },
+      { header: 'Billing Code', key: 'billing_code', width: 10 },
+    ];
+
+    // 4) Add rows
+    accounts.forEach(account => {
+      ws.addRow({
+        owner: account.owner?.name || '',
+        name: account.name,
+        type: account.type,
+        industry: account.industry,
+        billing_street: account.billing_street,
+        billing_city: account.billing_city,
+        billing_state: account.billing_state,
+        billing_country: account.billing_country,
+        billing_code: account.billing_code,
+      });
+    });
+
+    // Build a timestamp: YYYYMMDD_HHMMSS -> to add in the name part
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const ts = [
+      now.getFullYear(),
+      pad(now.getMonth() + 1),
+      pad(now.getDate())
+    ].join('') + '_' + [
+      pad(now.getHours()),
+      pad(now.getMinutes()),
+      pad(now.getSeconds())
+    ].join('');
+
+    const filename = `accounts_${ts}.xlsx`;
+
+    // 5) Set response headers & stream the file
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      `Content-Disposition`,
+      `attachment; filename = "${filename}"`
+    );
+
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error('Export error:', err);
+    req.flash('error_msg', 'Failed to export accounts');
     res.redirect('/accounts');
   }
 });

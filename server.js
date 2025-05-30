@@ -38,7 +38,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+  cookie: {
+    maxAge: 0.5 * 60 * 60 * 1000 // 0.5 hours in milliseconds
+  }
 }));
 
 // Passport middlewares
@@ -50,7 +53,7 @@ app.use(flash());
 
 // expose flash to all views
 app.use((req, res, next) => {
-  res.locals.user        = req.user;
+  res.locals.user        = req.user || null;
   res.locals.success_msg = req.flash('success_msg');
   res.locals.error_msg   = req.flash('error_msg');
   res.locals.errors      = req.flash('errors');
@@ -74,6 +77,7 @@ app.use('/contacts', ensureAuthenticated, require('./routes/contacts'));
 app.use('/leads',    ensureAuthenticated, require('./routes/leads'));
 app.use('/deals',    ensureAuthenticated, require('./routes/deals'));
 app.use('/accounts', ensureAuthenticated, require('./routes/accounts'));
+app.use('/tasks', ensureAuthenticated, require('./routes/tasks'));
 
 
 //Start Server

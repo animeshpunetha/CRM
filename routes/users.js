@@ -5,6 +5,7 @@ const router  = express.Router();
 const bcrypt  = require('bcryptjs');
 const multer  = require('multer');
 const User    = require('../models/User');
+const Excel = require('exceljs');
 const { parseExcelBuffer } = require('../utils/excelImporter');
 const { ensureAuthenticated, ensureRole } = require('../middleware/auth');
 
@@ -14,8 +15,17 @@ const upload = multer({ storage: multer.memoryStorage() });
 // GET /users - list all users
 router.get('/', ensureAuthenticated, async (req, res) => {
   try {
-    const users = await User.find().sort('-createdAt');
-    res.render('users/index', { users });
+    // get the sort fields and order from query parameters
+
+    const sortField = req.query.sort || 'createdAt';
+    const sortOrder = req.query.order === 'asc' ? 1 : -1;
+
+    // construct dynamic sort 
+    const sortOptions = {};
+    sortOptions[sortField] = sortOrder;
+
+    const users = await User.find().sort(sortOptions).collation({ locale: 'en', strength: 2 });
+    res.render('users/index', { users, currentSort: sortField, currentOrder: sortOrder === 1 ? 'asc' : 'desc' });
   } catch (err) {
     console.error(err);
     res.status(500).send('Server Error');
@@ -172,6 +182,69 @@ router.delete('/:id/delete', ensureAuthenticated, ensureRole('admin',{ redirectB
   } catch (err) {
     console.error(err);
     req.flash('error_msg', 'Error deleting user');
+    res.redirect('/users');
+  }
+});
+
+// Export the data into xlsx format
+// GET /users/export → send all users as an Excel file
+router.get('/export', ensureAuthenticated, async (req, res) => {
+  try {
+    // 1) Fetch & populate your data
+    const users = await User.find()
+      .sort('-createdAt')
+    // 2) Build a new workbook and worksheet
+    const wb = new Excel.Workbook();
+    const ws = wb.addWorksheet('Users');
+
+    // 3) Define your columns (header / key / width)
+    ws.columns = [
+      { header: 'User Name',        key: 'name',     width: 30 },
+      { header: 'Email',       key: 'email',    width: 30 },
+      { header: 'User Role',       key: 'role',    width: 15 },
+      { header: 'Created At',  key: 'createdAt',width: 20 },
+    ];
+
+    // 4) Add rows
+    users.forEach(user => {
+      ws.addRow({
+        name:        user.name,
+        email:       user.email,
+        role:       user.role,
+        createdAt:   user.createdAt.toLocaleString(),
+      });
+    });
+
+    // Build a timestamp: YYYYMMDD_HHMMSS -> to add in the name part
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    const ts = [
+      now.getFullYear(),
+      pad(now.getMonth()+1),
+      pad(now.getDate())
+    ].join('') + '_' + [
+      pad(now.getHours()),
+      pad(now.getMinutes()),
+      pad(now.getSeconds())
+    ].join('');
+
+    const filename = `users_${ts}.xlsx`;
+
+    // 5) Set response headers & stream the file
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      `Content-Disposition`,
+      `attachment; filename = "${filename}"`
+    );
+
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error('Export error:', err);
+    req.flash('error_msg','Failed to export users');
     res.redirect('/users');
   }
 });

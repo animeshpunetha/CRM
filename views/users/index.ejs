@@ -6,7 +6,7 @@
       <div>
         <a href="/users/new" class="btn btn-light">Create New User</a> <a href="/users/import"
           class="btn btn-light">Import
-          XLSX</a>
+          XLSX</a> <a href="/users/export" class="btn btn-light">Export XLSX</a>
       </div>
     </div>
     <div class="card-body">
@@ -19,9 +19,18 @@
             <table class="table table-hover table-striped">
               <thead class="table-light">
                 <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Role</th>
+                  <th><a
+                    href="?sort=name&order=<%= currentSort === 'name' && currentOrder === 'asc' ? 'desc' : 'asc' %>">
+                    Name <%= currentSort==='name' ? (currentOrder==='asc' ? '▲' : '▼' ) : '' %>
+                  </a></th>
+                  <th><a
+                    href="?sort=email&order=<%= currentSort === 'email' && currentOrder === 'asc' ? 'desc' : 'asc' %>">
+                    Email <%= currentSort==='email' ? (currentOrder==='asc' ? '▲' : '▼' ) : '' %>
+                  </a></th>
+                  <th><a
+                    href="?sort=role&order=<%= currentSort === 'role' && currentOrder === 'asc' ? 'desc' : 'asc' %>">
+                    Role <%= currentSort==='role' ? (currentOrder==='asc' ? '▲' : '▼' ) : '' %>
+                  </a></th>
                   <th>Actions</th>
                 </tr>
               </thead>

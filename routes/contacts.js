@@ -12,10 +12,17 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // GET /contacts → list all contacts
 router.get('/', ensureAuthenticated, async (req, res) => {
-  const contacts = await Contact.find()
-    .sort('-createdAt')
-    .populate('owner', 'name'); // Optional: populate owner if referenced
-  res.render('contacts/index', { contacts });
+  // get the sort fields and order from query parameters
+
+  const sortField = req.query.sort || 'createdAt';
+  const sortOrder = req.query.order === 'asc' ? 1 : -1;
+
+  // construct dynamic sort 
+  const sortOptions = {};
+  sortOptions[sortField] = sortOrder;
+
+  const contacts = await Contact.find().sort(sortOptions).collation({ locale: 'en', strength: 2 }).populate('owner', 'name'); // Optional: populate owner if referenced
+  res.render('contacts/index', { contacts , currentSort: sortField, currentOrder: sortOrder === 1 ? 'asc' : 'desc' });
 });
 
 // GET /contacts/new → render form to add a new contact
@@ -129,7 +136,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
 
 // GET /contacts/:id/edit — show the edit form
 router.get(
-  '/:id/edit', ensureAuthenticated, 
+  '/:id/edit', ensureAuthenticated,
   async (req, res) => {
     try {
       const [contact, users] = await Promise.all([
@@ -148,7 +155,7 @@ router.get(
 
 // PUT /contacts/:id/edit — handle the edit submission
 router.put(
-  '/:id/edit', ensureAuthenticated, 
+  '/:id/edit', ensureAuthenticated,
   async (req, res) => {
     const { owner, name, company, email, phone } = req.body;
     let errors = [];
@@ -181,7 +188,7 @@ router.put(
 
 // DELETE /contacts/:id/delete — delete the contact
 router.delete(
-  '/:id/delete', ensureAuthenticated, ensureRole('admin',{ redirectBack: true }), 
+  '/:id/delete', ensureAuthenticated, ensureRole('admin', { redirectBack: true }),
   async (req, res) => {
     try {
       await Contact.findByIdAndDelete(req.params.id);
@@ -195,5 +202,73 @@ router.delete(
   }
 );
 
+// Export the data into xlsx format
+// GET /contacts/export → send all contacts as an Excel file
+router.get('/export', ensureAuthenticated, async (req, res) => {
+  try {
+    // 1) Fetch & populate your data
+    const contacts = await Contact.find()
+      .sort('-createdAt')
+      .populate('owner', 'name');
+
+    // 2) Build a new workbook and worksheet
+    const wb = new Excel.Workbook();
+    const ws = wb.addWorksheet('Contacts');
+
+    // 3) Define your columns (header / key / width)
+    ws.columns = [
+      { header: 'Contact Owner',       key: 'owner',    width: 25 },
+      { header: 'Contact Name',        key: 'name',     width: 30 },
+      { header: 'Company',     key: 'company',  width: 25 },
+      { header: 'Email',       key: 'email',    width: 30 },
+      { header: 'Phone',       key: 'phone',    width: 20 },
+      { header: 'Created At',  key: 'createdAt',width: 20 },
+    ];
+
+    // 4) Add rows
+    contacts.forEach(contact => {
+      ws.addRow({
+        owner:       contact.owner?.name || '',
+        name:        contact.name,
+        company:     contact.company,
+        email:       contact.email,
+        phone:       contact.phone,
+        createdAt:   contact.createdAt.toLocaleString(),
+      });
+    });
+
+    // Build a timestamp: YYYYMMDD_HHMMSS -> to add in the name part
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    const ts = [
+      now.getFullYear(),
+      pad(now.getMonth()+1),
+      pad(now.getDate())
+    ].join('') + '_' + [
+      pad(now.getHours()),
+      pad(now.getMinutes()),
+      pad(now.getSeconds())
+    ].join('');
+
+    const filename = `contacts_${ts}.xlsx`;
+
+    // 5) Set response headers & stream the file
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      `Content-Disposition`,
+      `attachment; filename = "${filename}"`
+    );
+
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error('Export error:', err);
+    req.flash('error_msg','Failed to export contacts');
+    res.redirect('/contacts');
+  }
+});
 
 module.exports = router;

@@ -35,6 +35,10 @@ a:hover {
     --primary-brand-color-light: #2c72b8; /* A lighter shade for potential accents or subtle highlights */
     --secondary-bg-light: #f2f5f9; /* A softer light grey for backgrounds */
     --border-color-light: #e0e6ec; /* A light border color */
+    --kanban-header-bg: #e0f2f7; /* Light blue background for Kanban column headers */
+    --kanban-header-border: #a7d9ee; /* Border color for Kanban column headers */
+    --kanban-card-border: #dde1e6; /* A very subtle border for cards */
+    --kanban-date-color: #dc3545; /* Red for due dates */
 }
 
 /*------------------------------------*\
@@ -89,6 +93,9 @@ a:hover {
   #CONTAINER & CARD STYLING
 \*------------------------------------*/
 
+/* Note: The main .container might not be needed for the Kanban board itself
+   if the board spans full width within the body. Adjust as needed.
+   For now, we'll keep it as it seems to wrap other content. */
 .container {
     background-color: #ffffff; /* Sets a white background for the main content area */
     border-radius: 12px; /* Slightly more rounded corners for a softer feel */
@@ -99,7 +106,7 @@ a:hover {
     border: 1px solid var(--border-color-light); /* Adds a subtle light border */
 }
 
-/* Card General Styling */
+/* Card General Styling (if used outside Kanban) */
 .card {
     border: 1px solid var(--border-color-light); /* Light border for cards */
     border-radius: 10px; /* Rounded corners for cards */

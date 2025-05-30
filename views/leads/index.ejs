@@ -5,7 +5,7 @@
       <h2 class="card-title mb-0">All Leads</h2>
       <div>
         <a href="/leads/new" class="btn btn-light me-2">New Lead</a> <a href="/leads/import"
-          class="btn btn-light">Import XLSX</a>
+          class="btn btn-light">Import XLSX</a> <a href="/leads/export" class="btn btn-light">Export XLSX</a>
       </div>
     </div>
     <div class="card-body">
@@ -14,12 +14,29 @@
           <table class="table table-hover table-striped">
             <thead class="table-light">
               <tr>
-                <th>Owner</th>
-                <th>Name</th>
-                <th>Company</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Created At</th>
+                <th><a
+                    href="?sort=owner.name&order=<%= currentSort === 'owner.name' && currentOrder === 'asc' ? 'desc' : 'asc' %>">
+                    Owner <%= currentSort==='owner.name' ? (currentOrder==='asc' ? '▲' : '▼' ) : '' %>
+                  </a></th>
+                <th><a href="?sort=name&order=<%= currentSort === 'name' && currentOrder === 'asc' ? 'desc' : 'asc' %>">
+                    Name <%= currentSort==='name' ? (currentOrder==='asc' ? '▲' : '▼' ) : '' %>
+                  </a></th>
+                <th><a
+                    href="?sort=company&order=<%= currentSort === 'company' && currentOrder === 'asc' ? 'desc' : 'asc' %>">
+                    Company <%= currentSort==='company' ? (currentOrder==='asc' ? '▲' : '▼' ) : '' %>
+                  </a></th>
+                <th><a
+                    href="?sort=email&order=<%= currentSort === 'email' && currentOrder === 'asc' ? 'desc' : 'asc' %>">
+                    Email <%= currentSort==='email' ? (currentOrder==='asc' ? '▲' : '▼' ) : '' %>
+                  </a></th>
+                <th><a
+                    href="?sort=phone&order=<%= currentSort === 'phone' && currentOrder === 'asc' ? 'desc' : 'asc' %>">
+                    Phone <%= currentSort==='phone' ? (currentOrder==='asc' ? '▲' : '▼' ) : '' %>
+                  </a></th>
+                <th><a
+                    href="?sort=createdAt&order=<%= currentSort === 'createdAt' && currentOrder === 'asc' ? 'desc' : 'asc' %>">
+                    Created At <%= currentSort==='createdAt' ? (currentOrder==='asc' ? '▲' : '▼' ) : '' %>
+                  </a></th>
                 <th>Actions</th>
               </tr>
             </thead>

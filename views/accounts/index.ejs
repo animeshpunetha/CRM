@@ -5,7 +5,7 @@
       <h2 class="card-title mb-0">All Accounts</h2>
       <div>
         <a href="/accounts/new" class="btn btn-light">New Account</a> <a href="/accounts/import"
-          class="btn btn-light">Import XLSX</a>
+          class="btn btn-light">Import XLSX</a> <a href="/accounts/export" class="btn btn-light">Export XLSX</a>
       </div>
     </div>
     <div class="card-body">
@@ -19,9 +19,18 @@
               <thead class="table-light">
                 <tr>
                   <th>Owner</th>
-                  <th>Name</th>
-                  <th>Type</th>
-                  <th>Industry</th>
+                  <th><a
+                    href="?sort=name&order=<%= currentSort === 'name' && currentOrder === 'asc' ? 'desc' : 'asc' %>">
+                    Name <%= currentSort==='name' ? (currentOrder==='asc' ? '▲' : '▼' ) : '' %>
+                  </a></th>
+                  <th><a
+                    href="?sort=type&order=<%= currentSort === 'type' && currentOrder === 'asc' ? 'desc' : 'asc' %>">
+                    Type <%= currentSort==='type' ? (currentOrder==='asc' ? '▲' : '▼' ) : '' %>
+                  </a></th>
+                  <th><a
+                    href="?sort=industry&order=<%= currentSort === 'industry' && currentOrder === 'asc' ? 'desc' : 'asc' %>">
+                    Industry <%= currentSort==='industry' ? (currentOrder==='asc' ? '▲' : '▼' ) : '' %>
+                  </a></th>
                   <th>Billing Address</th>
                   <th>Actions</th>
                 </tr>

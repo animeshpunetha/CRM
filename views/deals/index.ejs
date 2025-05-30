@@ -5,7 +5,7 @@
       <h2 class="card-title mb-0">All Deals</h2>
       <div>
         <a href="/deals/new" class="btn btn-light">New Deal</a> <a href="/deals/import" class="btn btn-light">Import
-          XLSX</a>
+          XLSX</a> <a href="/deals/export" class="btn btn-light">Export XLSX</a> <a href="/deals/kanban" class="btn btn-light">Kanban View</a>
       </div>
     </div>
     <div class="card-body">
@@ -19,9 +19,18 @@
               <thead class="table-light">
                 <tr>
                   <th>Deal Owner</th>
-                  <th>Deal Name</th>
-                  <th>Amount</th>
-                  <th>Probability</th>
+                  <th><a
+                    href="?sort=name&order=<%= currentSort === 'name' && currentOrder === 'asc' ? 'desc' : 'asc' %>">
+                    Deal Name <%= currentSort==='name' ? (currentOrder==='asc' ? '▲' : '▼' ) : '' %>
+                  </a></th>
+                  <th><a
+                    href="?sort=amount&order=<%= currentSort === 'amount' && currentOrder === 'asc' ? 'desc' : 'asc' %>">
+                    Amount <%= currentSort==='amount' ? (currentOrder==='asc' ? '▲' : '▼' ) : '' %>
+                  </a></th>
+                  <th><a
+                    href="?sort=probablity&order=<%= currentSort === 'probablity' && currentOrder === 'asc' ? 'desc' : 'asc' %>">
+                    Probablity <%= currentSort==='probablity' ? (currentOrder==='asc' ? '▲' : '▼' ) : '' %>
+                  </a></th>
                   <th>Contact</th>
                   <th>Account</th>
                   <th>Actions</th>

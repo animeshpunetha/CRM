@@ -7,29 +7,6 @@
                 <h2 class="card-title mb-0">Welcome Back to CRM</h2> <%# Clear, engaging title %>
             </div>
             <div class="card-body p-4"> <%# Increased padding for better content spacing %>
-                <%# Improved conditional checks for flash messages %>
-                <% if (typeof success_msg !== 'undefined' && success_msg && success_msg.length > 0) { %>
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <%= success_msg %>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                <% } %>
-                <% if (typeof error_msg !== 'undefined' && error_msg && error_msg.length > 0) { %>
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <%= error_msg %>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                <% } %>
-                <% if (typeof errors !== 'undefined' && errors !== null && errors.length > 0) { %>
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <ul class="mb-0 ps-3"> <%# List for multiple errors %>
-                            <% errors.forEach(err => { %>
-                                <li><%= err.msg %></li>
-                            <% }) %>
-                        </ul>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                <% } %>
 
                 <form action="/auth/login" method="POST">
                     <div class="mb-3">
@@ -49,11 +26,9 @@
 
                     <div class="text-center mt-3"> <%# Centered and added top margin %>
                         <small class="text-muted">
-                            Don't have an account? <a href="/auth/register" class="text-decoration-none">Sign Up</a> <%# Link to register %>
-                        </small>
-                        <br>
-                        <small class="text-muted">
-                            <a href="/auth/forgot-password" class="text-decoration-none">Forgot Password?</a> <%# Link to forgot password %>
+                            Don't remember your password?
+                            <br>
+                            <a href="/auth/forgot-password" class="text-decoration-none">Forgot Password</a> <%# Link to forgot password %>
                         </small>
                     </div>
                 </form>

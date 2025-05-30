@@ -14,139 +14,209 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // GET /deals
 router.get('/', ensureAuthenticated, async (req, res) => {
-    try {
-        const deals = await Deal.find()
-            .sort('-createdAt')
-            .populate('owner', 'name')
-            .populate('account', 'name')
-            .populate('contact_person', 'name');
-        res.render('deals/index', { deals });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Server Error');
-    }
+  try {
+    // get the sort fields and order from query parameters
+    const sortField = req.query.sort || 'createdAt';
+    const sortOrder = req.query.order === 'asc' ? 1 : -1;
+
+    // construct dynamic sort
+    const sortOptions = {};
+    sortOptions[sortField] = sortOrder;
+
+    const deals = await Deal.find().sort(sortOptions).collation({ locale: 'en', strength: 2 })
+      .populate('owner', 'name')
+      .populate('account', 'name')
+      .populate('contact_person', 'name');
+    res.render('deals/index', { deals, currentSort: sortField, currentOrder: sortOrder === 1 ? 'asc' : 'desc' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
 });
 
 // GET /deals/new
 router.get('/new', ensureAuthenticated, async (req, res) => {
-    try {
-        const [users, accounts, contacts] = await Promise.all([
-            User.find().sort('name'),
-            Account.find().sort('name'),
-            Contact.find().sort('name')
-        ]);
-        res.render('deals/new', {
-            users,
-            accounts,
-            contacts,
-            owner: '',
-            name: '',
-            account: '',
-            contact_person: '',
-            amount: '',
-            due_date: '',
-            probablity: '',
-            errors: []
-        });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Server Error');
-    }
+  try {
+    const [users, accounts, contacts] = await Promise.all([
+      User.find().sort('name'),
+      Account.find().sort('name'),
+      Contact.find().sort('name')
+    ]);
+    res.render('deals/new', {
+      users,
+      accounts,
+      contacts,
+      owner: '',
+      name: '',
+      account: '',
+      contact_person: '',
+      amount: '',
+      due_date: '',
+      probablity: '',
+      errors: []
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
 });
 
 // POST /deals
 router.post('/', ensureAuthenticated, async (req, res) => {
-    const {
-        owner,
-        name,
-        account,
-        contact_person,
-        amount,
-        due_date,
-        probablity,
-        action // this will hold 'save' or 'save_and_new'
-    } = req.body;
+  const {
+    owner,
+    name,
+    account,
+    contact_person,
+    amount,
+    due_date,
+    probablity,
+    action // this will hold 'save' or 'save_and_new'
+  } = req.body;
 
-    let errors = [];
+  let errors = [];
 
-    if (
-        !owner ||
-        !name ||
-        !account ||
-        !contact_person ||
-        amount == null ||
-        amount === '' ||
-        probablity == null ||
-        probablity === ''
-    ) {
-        errors.push({ msg: 'Please fill in all required fields.' });
+  if (
+    !owner ||
+    !name ||
+    !account ||
+    !contact_person ||
+    amount == null ||
+    amount === '' ||
+    probablity == null ||
+    probablity === ''
+  ) {
+    errors.push({ msg: 'Please fill in all required fields.' });
+  }
+
+  if (errors.length) {
+    const [users, accounts, contacts] = await Promise.all([
+      User.find().sort('name'),
+      Account.find().sort('name'),
+      Contact.find().sort('name')
+    ]);
+    return res.render('deals/new', {
+      errors,
+      users,
+      accounts,
+      contacts,
+      owner,
+      name,
+      account,
+      contact_person,
+      amount,
+      due_date,
+      probablity
+    });
+  }
+
+  try {
+    await Deal.create({
+      owner,
+      name,
+      account,
+      contact_person,
+      amount,
+      due_date: due_date || Date.now(),
+      probablity
+    });
+
+    if (action === 'save_and_new') {
+      req.flash('success_msg', 'Deal created. You can create a new one now.');
+      return res.redirect('/deals/new');
+    } else {
+      req.flash('success_msg', 'Deal created successfully.');
+      return res.redirect('/deals');
     }
+  } catch (err) {
+    console.error(err);
+    const [users, accounts, contacts] = await Promise.all([
+      User.find().sort('name'),
+      Account.find().sort('name'),
+      Contact.find().sort('name')
+    ]);
+    return res.render('deals/new', {
+      errors: [{ msg: 'Error creating deal; please try again.' }],
+      users,
+      accounts,
+      contacts,
+      owner,
+      name,
+      account,
+      contact_person,
+      amount,
+      due_date,
+      probablity
+    });
+  }
+});
 
-    if (errors.length) {
-        const [users, accounts, contacts] = await Promise.all([
-            User.find().sort('name'),
-            Account.find().sort('name'),
-            Contact.find().sort('name')
-        ]);
-        return res.render('deals/new', {
-            errors,
-            users,
-            accounts,
-            contacts,
-            owner,
-            name,
-            account,
-            contact_person,
-            amount,
-            due_date,
-            probablity
-        });
-    }
+// GET /deals/kanban → Kanban view grouped by probability
+router.get('/kanban', ensureAuthenticated, async (req, res) => {
+  try {
+    const buckets = [0, 10, 20, 40, 60, 75, 90, 100];
 
-    try {
-        await Deal.create({
-            owner,
-            name,
-            account,
-            contact_person,
-            amount,
-            due_date: due_date || Date.now(),
-            probablity
-        });
+    const deals = await Deal.find()
+      .populate('owner', 'name')
+      .populate('account', 'name')
+      .populate('contact_person', 'name')
+      .sort('name'); // You might want to sort by due_date or something else relevant for kanban cards
 
-        if (action === 'save_and_new') {
-            req.flash('success_msg', 'Deal created. You can create a new one now.');
-            return res.redirect('/deals/new');
-        } else {
-            req.flash('success_msg', 'Deal created successfully.');
-            return res.redirect('/deals');
-        }
-    } catch (err) {
-        console.error(err);
-        const [users, accounts, contacts] = await Promise.all([
-            User.find().sort('name'),
-            Account.find().sort('name'),
-            Contact.find().sort('name')
-        ]);
-        return res.render('deals/new', {
-            errors: [{ msg: 'Error creating deal; please try again.' }],
-            users,
-            accounts,
-            contacts,
-            owner,
-            name,
-            account,
-            contact_person,
-            amount,
-            due_date,
-            probablity
-        });
-    }
+    // Calculate total count of all deals for percentage calculation
+    const totalDealsCount = deals.length;
+    // Calculate total amount of all deals
+    const totalAmountAllDeals = deals.reduce((sum, deal) => sum + deal.amount, 0);
+
+
+    const grouped = buckets.reduce((acc, p) => {
+      acc[p] = {
+        deals: [],
+        count: 0,
+        totalAmount: 0,
+        percentage: 0 // Will be calculated after all deals are grouped
+      };
+      return acc;
+    }, {});
+
+    deals.forEach(deal => {
+      if (grouped[deal.probablity]) { // Ensure the probability exists in your buckets
+        grouped[deal.probablity].deals.push(deal);
+        grouped[deal.probablity].count++;
+        grouped[deal.probablity].totalAmount += deal.amount;
+      }
+    });
+
+    // Calculate percentages after grouping
+    buckets.forEach(p => {
+      if (totalDealsCount > 0) {
+        grouped[p].percentage = ((grouped[p].count / totalDealsCount) * 100).toFixed(0); // Round to whole number
+      } else {
+        grouped[p].percentage = 0;
+      }
+    });
+
+    buckets.forEach(p => {
+      // already have grouped[p].totalAmount and grouped[p].percentage
+      // format totalAmount as currency string once:
+      const amt = grouped[p].totalAmount || 0;
+      grouped[p].formattedTotal = amt.toLocaleString('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    });
+
+    res.render('deals/kanban', { buckets, grouped });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
 });
 
 // GET /deals/import → show Excel upload form
 router.get('/import', ensureAuthenticated, async (req, res) => {
-    res.render('deals/import');
+  res.render('deals/import');
 });
 
 // POST /deals/import → handle Excel upload and import
@@ -167,7 +237,7 @@ router.post('/import', ensureAuthenticated, upload.single('file'), async (req, r
       Contact.find().select('name')
     ]);
 
-    const usersByName    = Object.fromEntries(allUsers   .map(u => [u.name, u._id]));
+    const usersByName = Object.fromEntries(allUsers.map(u => [u.name, u._id]));
     const accountsByName = Object.fromEntries(allAccounts.map(a => [a.name, a._id]));
     const contactsByName = Object.fromEntries(allContacts.map(c => [c.name, c._id]));
 
@@ -187,13 +257,13 @@ router.post('/import', ensureAuthenticated, upload.single('file'), async (req, r
       }
 
       return {
-        owner:          usersByName[r.owner],
-        name:           r.name,
-        account:        accountsByName[r.account],
+        owner: usersByName[r.owner],
+        name: r.name,
+        account: accountsByName[r.account],
         contact_person: contactsByName[r.contact_person],
-        amount:         Number(r.amount) || 0,
-        due_date:       r.due_date ? new Date(r.due_date) : undefined,
-        probablity:     Number(r.probablity) || 0
+        amount: Number(r.amount) || 0,
+        due_date: r.due_date ? new Date(r.due_date) : undefined,
+        probablity: Number(r.probablity) || 0
       };
     });
 
@@ -215,7 +285,7 @@ router.post('/import', ensureAuthenticated, upload.single('file'), async (req, r
 });
 
 // GET /deals/:id/edit → show the edit form
-router.get('/:id/edit', ensureAuthenticated, ensureRole('admin',{ redirectBack: true }), async (req, res) => {
+router.get('/:id/edit', ensureAuthenticated, ensureRole('admin', { redirectBack: true }), async (req, res) => {
   try {
     const deal = await Deal.findById(req.params.id);
     const [users, accounts, contacts] = await Promise.all([
@@ -245,7 +315,7 @@ router.get('/:id/edit', ensureAuthenticated, ensureRole('admin',{ redirectBack: 
 
 
 // PUT /deals/:id → update deal
-router.put('/:id', ensureAuthenticated, ensureRole('admin',{ redirectBack: true }), async (req, res) => {
+router.put('/:id', ensureAuthenticated, ensureRole('admin', { redirectBack: true }), async (req, res) => {
   const { owner, name, account, contact_person, amount, due_date, probablity } = req.body;
 
   let errors = [];
@@ -293,7 +363,7 @@ router.put('/:id', ensureAuthenticated, ensureRole('admin',{ redirectBack: true 
 
 
 // DELETE /deals/:id → delete deal
-router.delete('/:id', ensureAuthenticated, ensureRole('admin',{ redirectBack: true }), async (req, res) => {
+router.delete('/:id', ensureAuthenticated, ensureRole('admin', { redirectBack: true }), async (req, res) => {
   try {
     await Deal.findByIdAndDelete(req.params.id);
     req.flash('success_msg', 'Deal deleted successfully');
@@ -305,5 +375,77 @@ router.delete('/:id', ensureAuthenticated, ensureRole('admin',{ redirectBack: tr
   }
 });
 
+// Export the data into xlsx format
+// GET /deals/export → send all deals as an Excel file
+router.get('/export', ensureAuthenticated, async (req, res) => {
+  try {
+    // 1) Fetch & populate your data
+    const deals = await Deal.find()
+      .sort('-createdAt')
+      .populate('owner', 'name')
+      .populate('account', 'name')
+      .populate('contact_person', 'name');
+
+    // 2) Build a new workbook and worksheet
+    const wb = new Excel.Workbook();
+    const ws = wb.addWorksheet('Deals');
+
+    // 3) Define your columns (header / key / width)
+    ws.columns = [
+      { header: 'Deal Owner', key: 'owner', width: 25 },
+      { header: 'Deal Name', key: 'name', width: 30 },
+      { header: 'Account', key: 'account', width: 25 },
+      { header: 'Contact', key: 'contact_person', width: 30 },
+      { header: 'Amount (₹)', key: 'amount', width: 20 },
+      { header: 'Due Date', key: 'due_date', width: 20 },
+      { header: 'Probablity (%)', key: 'probablity', width: 20 },
+    ];
+
+    // 4) Add rows
+    deals.forEach(deal => {
+      ws.addRow({
+        owner: deal.owner?.name || '',
+        name: deal.name,
+        account: deal.account?.name || '',
+        contact_person: deal.contact_person?.name || '',
+        amount: deal.amount,
+        due_date: deal.due_date.toLocaleString(),
+        probablity: deal.probablity,
+      });
+    });
+
+    // Build a timestamp: YYYYMMDD_HHMMSS -> to add in the name part
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const ts = [
+      now.getFullYear(),
+      pad(now.getMonth() + 1),
+      pad(now.getDate())
+    ].join('') + '_' + [
+      pad(now.getHours()),
+      pad(now.getMinutes()),
+      pad(now.getSeconds())
+    ].join('');
+
+    const filename = `deals_${ts}.xlsx`;
+
+    // 5) Set response headers & stream the file
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      `Content-Disposition`,
+      `attachment; filename = "${filename}"`
+    );
+
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error('Export error:', err);
+    req.flash('error_msg', 'Failed to export deals');
+    res.redirect('/deals');
+  }
+});
 
 module.exports = router;

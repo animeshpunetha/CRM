@@ -1,0 +1,63 @@
+<%- include('../partials/header') %>
+
+<div class="container mt-5">
+  <div class="card">
+    <div class="card-header bg-warning text-dark">
+      <h2 class="card-title mb-0">Edit Task</h2>
+    </div>
+    <div class="card-body">
+      <form action="/tasks/<%= task._id %>/edit" method="POST">
+        <div class="mb-3">
+          <label for="title" class="form-label">Title</label>
+          <input type="text" class="form-control" name="title" id="title" value="<%= task.title %>" required>
+        </div>
+
+        <div class="mb-3">
+          <label for="description" class="form-label">Description</label>
+          <textarea class="form-control" name="description" id="description" rows="3"><%= task.description %></textarea>
+        </div>
+
+        <div class="mb-3">
+          <label for="due_date" class="form-label">Due Date</label>
+          <input type="date" class="form-control" name="due_date" id="due_date"
+            value="<%= task.due_date ? task.due_date.toISOString().split('T')[0] : '' %>">
+        </div>
+
+        <div class="mb-3">
+          <label for="priority" class="form-label">Priority</label>
+          <select class="form-select" name="priority" id="priority" required>
+            <option value="Low" <%= task.priority === 'Low' ? 'selected' : '' %>>Low</option>
+            <option value="Med" <%= task.priority === 'Med' ? 'selected' : '' %>>Med</option>
+            <option value="High" <%= task.priority === 'High' ? 'selected' : '' %>>High</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label for="status" class="form-label">Status</label>
+          <select class="form-select" name="status" id="status" required>
+            <option value="Pending" <%= task.status === 'Pending' ? 'selected' : '' %>>Pending</option>
+            <option value="In-Progess" <%= task.status === 'In-Progess' ? 'selected' : '' %>>In-Progess</option>
+            <option value="Completed" <%= task.status === 'Completed' ? 'selected' : '' %>>Completed</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label for="assigned_by" class="form-label">Assigned By</label>
+          <select class="form-select" name="assigned_by" id="assigned_by">
+            <option value="">-- Select a User --</option>
+            <% users.forEach(user => { %>
+              <option value="<%= user._id %>" <%= (task.assigned_by && task.assigned_by.toString() === user._id.toString()) ? 'selected' : '' %>>
+                <%= user.name %>
+              </option>
+            <% }) %>
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn-success">Update Task</button>
+        <a href="/tasks" class="btn btn-secondary">Cancel</a>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

@@ -10,82 +10,91 @@ const { ensureAuthenticated, ensureRole } = require('../middleware/auth');
 // Set up multer (in-memory storage)
 const upload = multer({ storage: multer.memoryStorage() });
 
-// GET /leads → list all leads
+// GET /leads → list all leads with sorting
 router.get('/', ensureAuthenticated, async (req, res) => {
-    try {
-        const leads = await Lead.find().sort('-createdAt').populate('owner');
-        res.render('leads/index', { leads });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Server Error');
-    }
+  try {
+    // get the sort fields and order from query parameters
+
+    const sortField = req.query.sort || 'createdAt';
+    const sortOrder = req.query.order === 'asc' ? 1 : -1;
+
+    // construct dynamic sort 
+    const sortOptions = {};
+    sortOptions[sortField] = sortOrder;
+
+    const leads = await Lead.find().sort(sortOptions).collation({ locale: 'en', strength: 2 }).populate('owner'); // collation term for case insensitive sorting
+    res.render('leads/index', { leads, currentSort: sortField, currentOrder: sortOrder === 1 ? 'asc' : 'desc' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
 });
 
 // GET /leads/new → render form to add a new lead
 router.get('/new', ensureAuthenticated, async (req, res) => {
-    try {
-        const users = await User.find().sort('name');
-        res.render('leads/new', {
-            users,
-            owner: '',
-            name: '',
-            company: '',
-            email: '',
-            phone: '',
-            description: ''
-        });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Server Error');
-    }
+  try {
+    const users = await User.find().sort('name');
+    res.render('leads/new', {
+      users,
+      owner: '',
+      name: '',
+      company: '',
+      email: '',
+      phone: '',
+      description: ''
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
 });
 
 // POST /leads → handle form submission and create a new lead
 router.post('/', ensureAuthenticated, async (req, res) => {
-    const { owner, name, company, email, phone, description } = req.body;
-    let errors = [];
+  const { owner, name, company, email, phone, description } = req.body;
+  let errors = [];
 
-    if (!owner || !name || !company || !email || !phone) {
-        errors.push({ msg: 'Please fill in all required fields.' });
-    }
+  if (!owner || !name || !company || !email || !phone) {
+    errors.push({ msg: 'Please fill in all required fields.' });
+  }
 
-    if (errors.length) {
-        const users = await User.find().sort('name');
-        return res.render('leads/new', {
-            users,
-            errors,
-            owner,
-            name,
-            company,
-            email,
-            phone,
-            description
-        });
-    }
+  if (errors.length) {
+    const users = await User.find().sort('name');
+    return res.render('leads/new', {
+      users,
+      errors,
+      owner,
+      name,
+      company,
+      email,
+      phone,
+      description
+    });
+  }
 
-    try {
-        await Lead.create({ owner, name, company, email, phone, description });
-        req.flash('success_msg', 'Lead created successfully');
-        res.redirect('/leads');
-    } catch (err) {
-        console.error(err);
-        const users = await User.find().sort('name');
-        res.render('leads/new', {
-            errors: [{ msg: 'Error creating lead, please try again' }],
-            users,
-            owner,
-            name,
-            company,
-            email,
-            phone,
-            description
-        });
-    }
+  try {
+    await Lead.create({ owner, name, company, email, phone, description });
+    req.flash('success_msg', 'Lead created successfully');
+    res.redirect('/leads');
+  } catch (err) {
+    console.error(err);
+    const users = await User.find().sort('name');
+    res.render('leads/new', {
+      errors: [{ msg: 'Error creating lead, please try again' }],
+      users,
+      owner,
+      name,
+      company,
+      email,
+      phone,
+      description
+    });
+  }
 });
 
 // GET /leads/import → show Excel upload form
 router.get('/import', ensureAuthenticated, async (req, res) => {
-    res.render('leads/import');
+  res.render('leads/import');
 });
 
 // POST /leads/import → handle Excel upload and import
@@ -109,12 +118,12 @@ router.post('/import', ensureAuthenticated, upload.single('file'), async (req, r
         throw new Error(`Unknown owner name "${r.owner}"`);
       }
       return {
-        owner:      usersByName[r.owner],
-        name:       r.name,
-        company:    r.company,
-        email:      r.email,
-        phone:      r.phone,
-        description:r.description || ''
+        owner: usersByName[r.owner],
+        name: r.name,
+        company: r.company,
+        email: r.email,
+        phone: r.phone,
+        description: r.description || ''
       };
     });
 
@@ -199,7 +208,7 @@ router.put('/:id/edit', ensureAuthenticated, async (req, res) => {
 
 
 // DELETE /leads/:id/delete → delete lead
-router.delete('/:id/delete', ensureAuthenticated, ensureRole('admin',{ redirectBack: true }), async (req, res) => {
+router.delete('/:id/delete', ensureAuthenticated, ensureRole('admin', { redirectBack: true }), async (req, res) => {
   try {
     await Lead.findByIdAndDelete(req.params.id);
     req.flash('success_msg', 'Lead deleted successfully');
@@ -211,5 +220,75 @@ router.delete('/:id/delete', ensureAuthenticated, ensureRole('admin',{ redirectB
   }
 });
 
+// Export the data into xlsx format
+// GET /leads/export → send all leads as an Excel file
+router.get('/export', ensureAuthenticated, async (req, res) => {
+  try {
+    // 1) Fetch & populate your data
+    const leads = await Lead.find()
+      .sort('-createdAt')
+      .populate('owner', 'name');
+
+    // 2) Build a new workbook and worksheet
+    const wb = new Excel.Workbook();
+    const ws = wb.addWorksheet('Leads');
+
+    // 3) Define your columns (header / key / width)
+    ws.columns = [
+      { header: 'Owner',       key: 'owner',    width: 25 },
+      { header: 'Name',        key: 'name',     width: 30 },
+      { header: 'Company',     key: 'company',  width: 25 },
+      { header: 'Email',       key: 'email',    width: 30 },
+      { header: 'Phone',       key: 'phone',    width: 20 },
+      { header: 'Created At',  key: 'createdAt',width: 20 },
+      { header: 'Description', key: 'description', width: 40 }
+    ];
+
+    // 4) Add rows
+    leads.forEach(lead => {
+      ws.addRow({
+        owner:       lead.owner?.name || '',
+        name:        lead.name,
+        company:     lead.company,
+        email:       lead.email,
+        phone:       lead.phone,
+        createdAt:   lead.createdAt.toLocaleString(),
+        description: lead.description || ''
+      });
+    });
+
+    // Build a timestamp: YYYYMMDD_HHMMSS -> to add in the name part
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    const ts = [
+      now.getFullYear(),
+      pad(now.getMonth()+1),
+      pad(now.getDate())
+    ].join('') + '_' + [
+      pad(now.getHours()),
+      pad(now.getMinutes()),
+      pad(now.getSeconds())
+    ].join('');
+
+    const filename = `leads_${ts}.xlsx`;
+
+    // 5) Set response headers & stream the file
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      `Content-Disposition`,
+      `attachment; filename = "${filename}"`
+    );
+
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error('Export error:', err);
+    req.flash('error_msg','Failed to export leads');
+    res.redirect('/leads');
+  }
+});
 
 module.exports = router;

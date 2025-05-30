@@ -6,6 +6,7 @@ const LeadSchema = new mongoose.Schema({
     company: { type: String, required: true },
     email: { type: String, required: true },
     phone: { type: String, required: true },
+    status: {type: String, enum: ['open', 'won', 'lost']},
     createdAt: { type: Date, default: Date.now },
     description: { type: String }
 });
