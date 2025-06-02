@@ -8,7 +8,7 @@
 </style>
 
 <div class="container py-4">
-  <h1 class="mb-4">Admin Dashboard</h1>
+  <h1 class="mb-4">Dashboard</h1>
 
   <!-- KPI Cards -->
   <div class="row g-4">
@@ -39,11 +39,21 @@
       </div>
     </div>
 
-    <div class="col-md-4 col-lg-3">
+    <!-- <div class="col-md-4 col-lg-3">
       <div class="card text-white bg-warning h-100">
         <div class="card-body text-center">
           <h5>Conversion Rate</h5>
           <h2><%= leadConversionRate %>%</h2>
+        </div>
+      </div>
+    </div> -->
+
+    <div class="col-md-4 col-lg-3">
+      <div class="card text-white bg-warning h-100">
+        <div class="card-body text-center">
+          <h5>Upcoming Deals (Next Month)</h5>
+          <h4><%= nextMonthDealsCount %> deal<%= nextMonthDealsCount === 1 ? '' : 's' %></h4>
+          <small>Total: ₹<%= nextMonthDealsAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 }) %></small>
         </div>
       </div>
     </div>

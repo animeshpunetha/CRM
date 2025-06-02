@@ -1,10 +1,10 @@
 // routes/users.js
 
 const express = require('express');
-const router  = express.Router();
-const bcrypt  = require('bcryptjs');
-const multer  = require('multer');
-const User    = require('../models/User');
+const router = express.Router();
+const bcrypt = require('bcryptjs');
+const multer = require('multer');
+const User = require('../models/User');
 const Excel = require('exceljs');
 const { parseExcelBuffer } = require('../utils/excelImporter');
 const { ensureAuthenticated, ensureRole } = require('../middleware/auth');
@@ -33,56 +33,90 @@ router.get('/', ensureAuthenticated, async (req, res) => {
 });
 
 // GET /users/new - form to create a user
-router.get('/new', ensureAuthenticated, ensureRole('admin',{ redirectBack: true }), (req, res) => {
-  res.render('users/new', {
-    errors:    [],
-    name:      '',
-    email:     '',
-    password:  '',
-    password2: '',
-    role:      'user'
+router.get('/new',
+  ensureAuthenticated,
+  ensureRole('admin', { redirectBack: true }),
+  async (req, res) => {
+    try {
+      // ◼️ Fetch all existing users so that new.ejs can loop over them
+      const users = await User.find().sort('name'); // or whatever sort you like
+
+      res.render('users/new', {
+        users,            // ◀︎– must pass users here
+        errors: [],
+        name: '',
+        email: '',
+        password: '',
+        password2: '',
+        emp_id: '',    // ◀︎– new.ejs also expects emp_id
+        manager_id: '',   // ◀︎– and manager_id
+        role: 'user'
+      });
+    } catch (err) {
+      console.error(err);
+      req.flash('error_msg', 'Unable to load form');
+      return res.redirect('/users');
+    }
   });
-});
 
 // POST /users - create a new user
-router.post('/', ensureAuthenticated, ensureRole('admin',{ redirectBack: true }), async (req, res) => {
-  const { name, email, password, password2, role } = req.body;
-  let errors = [];
+router.post('/',
+  ensureAuthenticated,
+  ensureRole('admin',{ redirectBack: true }),
+  async (req, res) => {
+    const { name, email, password, password2, role, emp_id, manager_id } = req.body;
+    let errors = [];
 
-  if (!name || !email || !password || !password2) {
-    errors.push({ msg: 'Please fill in all fields' });
-  }
-  if (password !== password2) {
-    errors.push({ msg: 'Passwords do not match' });
-  }
-  if (errors.length > 0) {
-    return res.render('users/new', { errors, name, email, password, password2, role });
-  }
+    if (!name || !email || !password || !password2 || !emp_id) {
+      errors.push({ msg: 'Please fill in all fields' });
+    }
+    if (password !== password2) {
+      errors.push({ msg: 'Passwords do not match' });
+    }
+    // (you might also check uniqueness of emp_id here, etc.)
 
-  try {
-    const existing = await User.findOne({ email });
-    if (existing) {
-      errors.push({ msg: 'Email already registered' });
-      return res.render('users/new', { errors, name, email, password, password2, role });
+    if (errors.length > 0) {
+      try {
+        // ◼️ Re‐fetch existing users before rendering errors
+        const users = await User.find().sort('name');
+        return res.render('users/new', {
+          users,
+          errors,
+          name,
+          email,
+          password,
+          password2,
+          emp_id,
+          manager_id,
+          role
+        });
+      } catch (err) {
+        console.error(err);
+        req.flash('error_msg', 'Unable to re‐load form');
+        return res.redirect('/users');
+      }
     }
 
-    const hash = await bcrypt.hash(password, 10);
-    await User.create({ name, email, password: hash, role });
-    req.flash('success_msg', 'User registered');
-    res.redirect('/users');
-  } catch (err) {
-    console.error(err);
-    res.redirect('/users');
-  }
+    try {
+      // … creation logic (hash password, create in DB, etc.) …
+      const hash = await bcrypt.hash(password, 10);
+      await User.create({ name, email, password: hash, role, emp_id, manager_id: manager_id || emp_id });
+      req.flash('success_msg', 'User registered');
+      return res.redirect('/users');
+    } catch (err) {
+      console.error(err);
+      req.flash('error_msg', 'Server error—could not create user');
+      return res.redirect('/users');
+    }
 });
 
 // GET /users/import - form to upload Excel
-router.get('/import', ensureAuthenticated, ensureRole('admin',{ redirectBack: true }), (req, res) => {
+router.get('/import', ensureAuthenticated, ensureRole('admin', { redirectBack: true }), (req, res) => {
   res.render('users/import');
 });
 
 // POST /users/import - handle Excel upload & import
-router.post('/import', ensureAuthenticated, ensureRole('admin',{ redirectBack: true }), upload.single('file'), async (req, res) => {
+router.post('/import', ensureAuthenticated, ensureRole('admin', { redirectBack: true }), upload.single('file'), async (req, res) => {
   if (!req.file) {
     req.flash('error_msg', 'Please select an Excel file to upload');
     return res.redirect('/users/import');
@@ -107,7 +141,7 @@ router.post('/import', ensureAuthenticated, ensureRole('admin',{ redirectBack: t
         name,
         email,
         password: hash,
-        role: role && ['admin','user'].includes(role) ? role : 'user'
+        role: role && ['admin', 'user'].includes(role) ? role : 'user'
       });
     }
 
@@ -127,14 +161,15 @@ router.post('/import', ensureAuthenticated, ensureRole('admin',{ redirectBack: t
 });
 
 // GET /users/:id/edit - show edit form
-router.get('/:id/edit', ensureAuthenticated, ensureRole('admin',{ redirectBack: true }), async (req, res) => {
+router.get('/:id/edit', ensureAuthenticated, ensureRole('admin', { redirectBack: true }), async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
+    const users = await User.find();
     if (!user) {
       req.flash('error_msg', 'User not found');
       return res.redirect('/users');
     }
-    res.render('users/edit', { user });
+    res.render('users/edit', { user, users });
   } catch (err) {
     console.error(err);
     res.redirect('/users');
@@ -142,7 +177,7 @@ router.get('/:id/edit', ensureAuthenticated, ensureRole('admin',{ redirectBack: 
 });
 
 // PUT /users/:id - update user
-router.put('/:id/edit', ensureAuthenticated, ensureRole('admin',{ redirectBack: true }), async (req, res) => {
+router.put('/:id/edit', ensureAuthenticated, ensureRole('admin', { redirectBack: true }), async (req, res) => {
   const { name, email, role, password, password2 } = req.body;
   try {
     const user = await User.findById(req.params.id);
@@ -174,7 +209,7 @@ router.put('/:id/edit', ensureAuthenticated, ensureRole('admin',{ redirectBack: 
 });
 
 // DELETE /users/:id - delete user
-router.delete('/:id/delete', ensureAuthenticated, ensureRole('admin',{ redirectBack: true }), async (req, res) => {
+router.delete('/:id/delete', ensureAuthenticated, ensureRole('admin', { redirectBack: true }), async (req, res) => {
   try {
     await User.findByIdAndDelete(req.params.id);
     req.flash('success_msg', 'User deleted successfully');
@@ -199,28 +234,28 @@ router.get('/export', ensureAuthenticated, async (req, res) => {
 
     // 3) Define your columns (header / key / width)
     ws.columns = [
-      { header: 'User Name',        key: 'name',     width: 30 },
-      { header: 'Email',       key: 'email',    width: 30 },
-      { header: 'User Role',       key: 'role',    width: 15 },
-      { header: 'Created At',  key: 'createdAt',width: 20 },
+      { header: 'User Name', key: 'name', width: 30 },
+      { header: 'Email', key: 'email', width: 30 },
+      { header: 'User Role', key: 'role', width: 15 },
+      { header: 'Created At', key: 'createdAt', width: 20 },
     ];
 
     // 4) Add rows
     users.forEach(user => {
       ws.addRow({
-        name:        user.name,
-        email:       user.email,
-        role:       user.role,
-        createdAt:   user.createdAt.toLocaleString(),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt.toLocaleString(),
       });
     });
 
     // Build a timestamp: YYYYMMDD_HHMMSS -> to add in the name part
     const now = new Date();
-    const pad = n => String(n).padStart(2,'0');
+    const pad = n => String(n).padStart(2, '0');
     const ts = [
       now.getFullYear(),
-      pad(now.getMonth()+1),
+      pad(now.getMonth() + 1),
       pad(now.getDate())
     ].join('') + '_' + [
       pad(now.getHours()),
@@ -244,7 +279,7 @@ router.get('/export', ensureAuthenticated, async (req, res) => {
     res.end();
   } catch (err) {
     console.error('Export error:', err);
-    req.flash('error_msg','Failed to export users');
+    req.flash('error_msg', 'Failed to export users');
     res.redirect('/users');
   }
 });

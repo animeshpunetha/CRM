@@ -5,14 +5,45 @@
     <h2 class="mb-0">Edit User</h2>
   </div>
   <div class="card-body">
+    <% if (typeof errors !== 'undefined' && errors !== null && errors.length > 0) { %>
+      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <ul class="mb-0 ps-3">
+          <% errors.forEach(e => { %>
+            <li><%= e.msg %></li>
+          <% }) %>
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    <% } %>
+
     <form action="/users/<%= user._id %>/edit?_method=PUT" method="POST">
       <div class="mb-3">
         <label for="name" class="form-label">Name</label>
-        <input type="text" name="name" id="name" class="form-control" value="<%= user.name %>" required>
+        <input name="name" type="text" class="form-control" id="name" value="<%= user.name %>" required>
       </div>
       <div class="mb-3">
         <label for="email" class="form-label">Email</label>
-        <input type="email" name="email" id="email" class="form-control" value="<%= user.email %>" required>
+        <input name="email" type="email" class="form-control" id="email" value="<%= user.email %>" required>
+      </div>
+      <div class="mb-3">
+        <label for="emp_id" class="form-label">Employee ID</label>
+        <input name="emp_id" type="text" class="form-control" id="emp_id" value="<%= user.emp_id %>" required>
+        <div class="form-text">Must be unique (e.g. “A123”).</div>
+      </div>
+      <div class="mb-3">
+        <label for="manager_id" class="form-label">Manager ID (if any)</label>
+        <select name="manager_id" id="manager_id" class="form-select">
+          <option value="">-- No manager (becomes their own emp_id) --</option>
+          <% users.forEach(u => { %>
+            <% if (u.emp_id !== user.emp_id) { %>
+              <option value="<%= u.emp_id %>" 
+                <%= (user.manager_id === u.emp_id) ? 'selected' : '' %>>
+                <%= u.name %> (emp_id: <%= u.emp_id %>)
+              </option>
+            <% } %>
+          <% }) %>
+        </select>
+        <div class="form-text">If blank, this user becomes top-level (manager_id = their own emp_id).</div>
       </div>
       <div class="mb-3">
         <label for="role" class="form-label">Role</label>
@@ -26,13 +57,13 @@
       </div>
       <div class="mb-3">
         <label for="password" class="form-label">New Password</label>
-        <input type="password" name="password" id="password" class="form-control">
+        <input name="password" type="password" class="form-control" id="password">
       </div>
       <div class="mb-3">
         <label for="password2" class="form-label">Confirm Password</label>
-        <input type="password" name="password2" id="password2" class="form-control">
+        <input name="password2" type="password" class="form-control" id="password2">
       </div>
-      <div class="text-end">
+      <div class="d-flex justify-content-end gap-2 mt-4">
         <button type="submit" class="btn btn-success">Update User</button>
         <a href="/users" class="btn btn-secondary">Cancel</a>
       </div>

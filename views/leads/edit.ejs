@@ -5,10 +5,12 @@
     <h2 class="card-title mb-0">Edit Lead</h2>
   </div>
   <div class="card-body">
-    <% if (errors.length) { %>
+    <% if (errors && errors.length) { %>
       <div class="alert alert-danger">
-        <ul>
-          <% errors.forEach(e => { %><li><%= e.msg %></li><% }) %>
+        <ul class="mb-0 ps-3">
+          <% errors.forEach(e => { %>
+            <li><%= e.msg %></li>
+          <% }) %>
         </ul>
       </div>
     <% } %>
@@ -19,8 +21,18 @@
         <select name="owner" id="owner" class="form-select" required>
           <option value="">-- Select Owner --</option>
           <% users.forEach(u => { %>
-            <option value="<%= u._id %>"
-              <%= lead.owner.toString() === u._id.toString() ? 'selected' : '' %>>
+            <option
+              value="<%= u._id %>"
+              <%=
+                // Safely grab lead.owner._id (if it exists), otherwise use ''.
+                ((lead.owner && lead.owner._id)
+                  ? lead.owner._id.toString()
+                  : ''
+                ) === u._id.toString()
+                  ? 'selected'
+                  : ''
+              %>
+            >
               <%= u.name %>
             </option>
           <% }) %>
@@ -29,27 +41,60 @@
 
       <div class="mb-3">
         <label for="name" class="form-label">Name</label>
-        <input name="name" id="name" value="<%= lead.name %>" type="text" class="form-control" required>
+        <input
+          name="name"
+          id="name"
+          value="<%= lead.name %>"
+          type="text"
+          class="form-control"
+          required
+        >
       </div>
 
       <div class="mb-3">
         <label for="company" class="form-label">Company</label>
-        <input name="company" id="company" value="<%= lead.company %>" type="text" class="form-control" required>
+        <input
+          name="company"
+          id="company"
+          value="<%= lead.company %>"
+          type="text"
+          class="form-control"
+          required
+        >
       </div>
 
       <div class="mb-3">
         <label for="email" class="form-label">Email</label>
-        <input name="email" id="email" value="<%= lead.email %>" type="email" class="form-control" required>
+        <input
+          name="email"
+          id="email"
+          value="<%= lead.email %>"
+          type="email"
+          class="form-control"
+          required
+        >
       </div>
 
       <div class="mb-3">
         <label for="phone" class="form-label">Phone</label>
-        <input name="phone" id="phone" value="<%= lead.phone %>" type="text" class="form-control" required>
+        <input
+          name="phone"
+          id="phone"
+          value="<%= lead.phone %>"
+          type="text"
+          class="form-control"
+          required
+        >
       </div>
 
       <div class="mb-3">
         <label for="description" class="form-label">Description</label>
-        <textarea name="description" id="description" class="form-control" rows="3"><%= lead.description %></textarea>
+        <textarea
+          name="description"
+          id="description"
+          class="form-control"
+          rows="3"
+        ><%= lead.description %></textarea>
       </div>
 
       <div class="d-flex justify-content-end gap-2 mt-4">

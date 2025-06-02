@@ -33,6 +33,28 @@
         <label for="password2" class="form-label">Confirm Password</label>
         <input name="password2" type="password" class="form-control" id="password2" required>
       </div>
+      <!-- added the functionality for emp_id -->
+      <div class="mb-3">
+        <label for="emp_id" class="form-label">Employee ID</label>
+        <input name="emp_id" type="text" class="form-control" id="emp_id" value="<%= typeof emp_id !== 'undefined' ? emp_id : '' %>" required>
+        <div class="form-text">Must be unique (e.g. “A123”).</div>
+      </div>
+
+      <div class="mb-3">
+        <label for="manager_id" class="form-label">Manager ID (if any)</label>
+        <select name="manager_id" id="manager_id" class="form-select">
+          <!-- Option: no manager -->
+          <option value="">-- No manager (becomes their own emp_id) --</option>
+          <% users.forEach(u => { %>
+            <option value="<%= u.emp_id %>" 
+              <%= (typeof manager_id !== 'undefined' && manager_id === u.emp_id) ? 'selected' : '' %>>
+              <%= u.name %> (emp_id: <%= u.emp_id %>)
+            </option>
+          <% }) %>
+        </select>
+        <div class="form-text">If blank, this user becomes top-level (manager_id = their own emp_id).</div>
+      </div>
+
       <div class="mb-3">
         <label for="role" class="form-label">Role</label>
         <select name="role" id="role" class="form-select">

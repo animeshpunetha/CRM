@@ -1,3 +1,5 @@
+// routes/leads.js
+
 const express = require('express');
 const router = express.Router();
 const Lead = require('../models/Lead');
@@ -7,23 +9,27 @@ const multer = require('multer');
 const { parseExcelBuffer } = require('../utils/excelImporter');
 const { ensureAuthenticated, ensureRole } = require('../middleware/auth');
 
-// Set up multer (in-memory storage)
+// In-memory multer storage
 const upload = multer({ storage: multer.memoryStorage() });
 
 // GET /leads → list all leads with sorting
 router.get('/', ensureAuthenticated, async (req, res) => {
   try {
-    // get the sort fields and order from query parameters
-
     const sortField = req.query.sort || 'createdAt';
     const sortOrder = req.query.order === 'asc' ? 1 : -1;
-
-    // construct dynamic sort 
     const sortOptions = {};
     sortOptions[sortField] = sortOrder;
 
-    const leads = await Lead.find().sort(sortOptions).collation({ locale: 'en', strength: 2 }).populate('owner'); // collation term for case insensitive sorting
-    res.render('leads/index', { leads, currentSort: sortField, currentOrder: sortOrder === 1 ? 'asc' : 'desc' });
+    const leads = await Lead.find()
+      .sort(sortOptions)
+      .collation({ locale: 'en', strength: 2 })
+      .populate('owner', 'name');
+
+    res.render('leads/index', {
+      leads,
+      currentSort: sortField,
+      currentOrder: sortOrder === 1 ? 'asc' : 'desc'
+    });
   } catch (err) {
     console.error(err);
     res.status(500).send('Server Error');
@@ -79,9 +85,9 @@ router.post('/', ensureAuthenticated, async (req, res) => {
   } catch (err) {
     console.error(err);
     const users = await User.find().sort('name');
-    res.render('leads/new', {
-      errors: [{ msg: 'Error creating lead, please try again' }],
+    return res.render('leads/new', {
       users,
+      errors: [{ msg: 'Error creating lead, please try again' }],
       owner,
       name,
       company,
@@ -105,13 +111,14 @@ router.post('/import', ensureAuthenticated, upload.single('file'), async (req, r
   }
 
   try {
-    // 1) Parse raw rows
     let rows = await parseExcelBuffer(req.file.buffer);
 
-    // 2) For each row, find the User by name and replace with their _id
-    const usersByName = {};
+    // Map owner names → ObjectId
     const allUsers = await User.find().select('name');
-    allUsers.forEach(u => { usersByName[u.name] = u._id; });
+    const usersByName = {};
+    allUsers.forEach(u => {
+      usersByName[u.name] = u._id;
+    });
 
     rows = rows.map(r => {
       if (!usersByName[r.owner]) {
@@ -127,14 +134,15 @@ router.post('/import', ensureAuthenticated, upload.single('file'), async (req, r
       };
     });
 
-    // 3) Bulk insert
+    // Bulk insert
     await Lead.insertMany(rows);
 
     req.flash('success_msg', 'Leads imported successfully');
     res.redirect('/leads');
   } catch (err) {
     console.error('Excel import error:', err);
-    req.flash('error_msg',
+    req.flash(
+      'error_msg',
       err.message.startsWith('Unknown owner')
         ? err.message
         : 'Failed to import leads from Excel'
@@ -146,8 +154,14 @@ router.post('/import', ensureAuthenticated, upload.single('file'), async (req, r
 // GET /leads/:id/edit → render edit form
 router.get('/:id/edit', ensureAuthenticated, async (req, res) => {
   try {
-    const lead = await Lead.findById(req.params.id).populate('owner');
+    const lead = await Lead.findById(req.params.id).populate('owner', 'name');
     if (!lead) return res.status(404).send('Lead not found');
+
+    // Ensure lead.owner is never `null` when passed to the template
+    if (!lead.owner) {
+      // If no owner assigned, set a dummy object so `.owner._id` always exists
+      lead.owner = { _id: '' };
+    }
 
     const users = await User.find().sort('name');
     res.render('leads/edit', {
@@ -161,7 +175,6 @@ router.get('/:id/edit', ensureAuthenticated, async (req, res) => {
   }
 });
 
-
 // PUT /leads/:id/edit → update lead
 router.put('/:id/edit', ensureAuthenticated, async (req, res) => {
   const { owner, name, company, email, phone, description } = req.body;
@@ -173,23 +186,28 @@ router.put('/:id/edit', ensureAuthenticated, async (req, res) => {
 
   try {
     const users = await User.find().sort('name');
-    const lead = await Lead.findById(req.params.id).populate('owner');
+    const lead = await Lead.findById(req.params.id).populate('owner', 'name');
     if (!lead) return res.status(404).send('Lead not found');
 
     if (errors.length) {
-      return res.render('leads/edit', {
-        users,
-        errors,
+      // Build a “lead‐shaped” object so that template’s `lead.owner._id.toString()` never sees null
+      const tempLead = {
         _id: req.params.id,
-        owner,
+        owner: { _id: owner || '' },
         name,
         company,
         email,
         phone,
         description
+      };
+      return res.render('leads/edit', {
+        users,
+        errors,
+        lead: tempLead
       });
     }
 
+    // Persist changes
     lead.owner = owner;
     lead.name = name;
     lead.company = company;
@@ -206,45 +224,44 @@ router.put('/:id/edit', ensureAuthenticated, async (req, res) => {
   }
 });
 
-
 // DELETE /leads/:id/delete → delete lead
-router.delete('/:id/delete', ensureAuthenticated, ensureRole('admin', { redirectBack: true }), async (req, res) => {
-  try {
-    await Lead.findByIdAndDelete(req.params.id);
-    req.flash('success_msg', 'Lead deleted successfully');
-    res.redirect('/leads');
-  } catch (err) {
-    console.error(err);
-    req.flash('error_msg', 'Failed to delete lead');
-    res.redirect('/leads');
+router.delete(
+  '/:id/delete',
+  ensureAuthenticated,
+  ensureRole('admin', { redirectBack: true }),
+  async (req, res) => {
+    try {
+      await Lead.findByIdAndDelete(req.params.id);
+      req.flash('success_msg', 'Lead deleted successfully');
+      res.redirect('/leads');
+    } catch (err) {
+      console.error(err);
+      req.flash('error_msg', 'Failed to delete lead');
+      res.redirect('/leads');
+    }
   }
-});
+);
 
-// Export the data into xlsx format
 // GET /leads/export → send all leads as an Excel file
 router.get('/export', ensureAuthenticated, async (req, res) => {
   try {
-    // 1) Fetch & populate your data
     const leads = await Lead.find()
       .sort('-createdAt')
       .populate('owner', 'name');
 
-    // 2) Build a new workbook and worksheet
     const wb = new Excel.Workbook();
     const ws = wb.addWorksheet('Leads');
 
-    // 3) Define your columns (header / key / width)
     ws.columns = [
-      { header: 'Owner',       key: 'owner',    width: 25 },
-      { header: 'Name',        key: 'name',     width: 30 },
-      { header: 'Company',     key: 'company',  width: 25 },
-      { header: 'Email',       key: 'email',    width: 30 },
-      { header: 'Phone',       key: 'phone',    width: 20 },
-      { header: 'Created At',  key: 'createdAt',width: 20 },
+      { header: 'Owner',       key: 'owner',       width: 25 },
+      { header: 'Name',        key: 'name',        width: 30 },
+      { header: 'Company',     key: 'company',     width: 25 },
+      { header: 'Email',       key: 'email',       width: 30 },
+      { header: 'Phone',       key: 'phone',       width: 20 },
+      { header: 'Created At',  key: 'createdAt',   width: 20 },
       { header: 'Description', key: 'description', width: 40 }
     ];
 
-    // 4) Add rows
     leads.forEach(lead => {
       ws.addRow({
         owner:       lead.owner?.name || '',
@@ -257,36 +274,37 @@ router.get('/export', ensureAuthenticated, async (req, res) => {
       });
     });
 
-    // Build a timestamp: YYYYMMDD_HHMMSS -> to add in the name part
     const now = new Date();
-    const pad = n => String(n).padStart(2,'0');
-    const ts = [
-      now.getFullYear(),
-      pad(now.getMonth()+1),
-      pad(now.getDate())
-    ].join('') + '_' + [
-      pad(now.getHours()),
-      pad(now.getMinutes()),
-      pad(now.getSeconds())
-    ].join('');
+    const pad = n => String(n).padStart(2, '0');
+    const ts =
+      [
+        now.getFullYear(),
+        pad(now.getMonth() + 1),
+        pad(now.getDate())
+      ].join('') +
+      '_' +
+      [
+        pad(now.getHours()),
+        pad(now.getMinutes()),
+        pad(now.getSeconds())
+      ].join('');
 
     const filename = `leads_${ts}.xlsx`;
 
-    // 5) Set response headers & stream the file
     res.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     );
     res.setHeader(
-      `Content-Disposition`,
-      `attachment; filename = "${filename}"`
+      'Content-Disposition',
+      `attachment; filename="${filename}"`
     );
 
     await wb.xlsx.write(res);
     res.end();
   } catch (err) {
     console.error('Export error:', err);
-    req.flash('error_msg','Failed to export leads');
+    req.flash('error_msg', 'Failed to export leads');
     res.redirect('/leads');
   }
 });
