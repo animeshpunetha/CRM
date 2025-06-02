@@ -66,12 +66,18 @@ if (!process.env.MAIL_USER || !process.env.MAIL_PASS) {
 
 // Auth & Guard middlewares
 app.use('/auth', require('./routes/auth'));
+
+// Redirect “/” ⇒ “/dashboard”
+app.get('/', (req,res) => {
+  return res.redirect('/dashboard');
+});
+
 // PROTECTED routes
 const { ensureAuthenticated } = require('./middleware/auth');
 
 
-
 // Redirect root to /dashboard if someone hits '/'
+app.use('/dashboard', ensureAuthenticated, require('./routes/dashboard'));
 app.use('/users',    ensureAuthenticated, require('./routes/users'));
 app.use('/contacts', ensureAuthenticated, require('./routes/contacts'));
 app.use('/leads',    ensureAuthenticated, require('./routes/leads'));

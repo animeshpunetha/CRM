@@ -1,0 +1,123 @@
+<%- include('partials/header') %>
+
+<style>
+  /* Simple spacing for the chart */
+  #repChartContainer {
+    margin-top: 2rem;
+  }
+</style>
+
+<div class="container py-4">
+  <h1 class="mb-4">Admin Dashboard</h1>
+
+  <!-- KPI Cards -->
+  <div class="row g-4">
+    <div class="col-md-4 col-lg-2">
+      <div class="card text-white bg-primary h-100">
+        <div class="card-body text-center">
+          <h5>Total Leads</h5>
+          <h2><%= totalLeads %></h2>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4 col-lg-2">
+      <div class="card text-white bg-success h-100">
+        <div class="card-body text-center">
+          <h5>Total Deals</h5>
+          <h2><%= totalDeals %></h2>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4 col-lg-2">
+      <div class="card text-white bg-info h-100">
+        <div class="card-body text-center">
+          <h5>Avg. Deal Size</h5>
+          <h2>₹<%= avgDealSize.toLocaleString('en-IN', {minimumFractionDigits: 2}) %></h2>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4 col-lg-3">
+      <div class="card text-white bg-warning h-100">
+        <div class="card-body text-center">
+          <h5>Conversion Rate</h5>
+          <h2><%= leadConversionRate %>%</h2>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4 col-lg-3">
+      <div class="card text-white bg-dark h-100">
+        <div class="card-body text-center">
+          <h5>Active Sales Reps</h5>
+          <h2><%= numberOfActiveReps %></h2>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bar Chart: Leads vs Deals per Rep -->
+  <div id="repChartContainer" class="card shadow-sm mb-5">
+    <div class="card-header bg-secondary text-white">
+      <h5 class="mb-0">Leads vs. Deals per Sales Rep</h5>
+    </div>
+    <div class="card-body">
+      <canvas id="repChart" height="100"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Chart.js CDN (or serve locally) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Grab data from server-passed EJS variables
+  const labels     = <%- repLabels %>;
+  const leadsData  = <%- repLeads  %>;
+  const dealsData  = <%- repDeals  %>;
+
+  const ctx = document.getElementById('repChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Leads',
+          data: leadsData,
+          backgroundColor: 'rgba(54, 162, 235, 0.7)'
+        },
+        {
+          label: 'Deals',
+          data: dealsData,
+          backgroundColor: 'rgba(75, 192, 192, 0.7)'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: {
+          stacked: false,
+          ticks: { maxRotation: 0, autoSkip: false }
+        },
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: 'Count' }
+        }
+      },
+      plugins: {
+        tooltip: {
+          mode: 'index',
+          intersect: false
+        },
+        legend: {
+          position: 'top'
+        }
+      }
+    }
+  });
+</script>
+
+<%- include('partials/footer') %>
