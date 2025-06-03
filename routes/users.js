@@ -127,22 +127,36 @@ router.post('/import', ensureAuthenticated, ensureRole('admin', { redirectBack: 
     const usersToInsert = [];
 
     for (let row of rawRows) {
-      const { name, email, password, role } = row;
+      const { name, email, password, role, emp_id, manager_id } = row;
 
-      if (!name || !email || !password) {
+      if (!name || !email || !password || !emp_id) {
         throw new Error(`Missing required field in row: ${JSON.stringify(row)}`);
       }
-      if (await User.findOne({ email })) {
-        throw new Error(`Email already registered: ${email}`);
+
+      const existingEmail = await User.findOne({ email });
+        if (existingEmail) {
+          throw new Error(`Email already registered: ${email}`);
+        }
+
+      const existingEmp = await User.findOne({ emp_id });
+      if (existingEmp) {
+        throw new Error(`Employee ID already in use: ${emp_id}`);
       }
 
       const hash = await bcrypt.hash(String(password), 10);
+      // Use the provided manager_id, or default it to emp_id itself if blank
+      const finalManagerId = manager_id && manager_id.trim() !== ''
+        ? manager_id.trim()
+        : emp_id.trim();
+
       usersToInsert.push({
-        name,
-        email,
-        password: hash,
-        role: role && ['admin', 'user'].includes(role) ? role : 'user'
-      });
+          name:       name.trim(),
+          email:      email.trim(),
+          password:   hash,
+          role:       role && ['admin', 'user'].includes(role) ? role : 'user',
+          emp_id:     emp_id.trim(),
+          manager_id: finalManagerId
+        });
     }
 
     await User.insertMany(usersToInsert);

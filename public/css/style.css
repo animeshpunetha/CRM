@@ -5,7 +5,7 @@
 /* Apply a clean, modern font and a soft background to the entire page */
 body {
     font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f8fafd; /* Very light, slightly cool background for brightness */
+    background-color: #f8f9fa; /* Very light, slightly cool background for brightness */
     color: #343a40; /* Dark grey for general text, ensures excellent readability */
     line-height: 1.6; /* Improves line spacing for better text flow */
     -webkit-font-smoothing: antialiased; /* Smoother font rendering */
@@ -370,3 +370,30 @@ td.text-nowrap form:not(:last-child) {
 html, body {
     overflow-x: hidden;
 }
+
+/*------------------------------------*\
+  #Dashboard
+\*------------------------------------*/
+.kpi-card {
+    border: none;
+    border-radius: 1rem;
+    background-color: #ffffff;
+    color: #343a40;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease;
+  }
+
+  .kpi-card:hover {
+    transform: translateY(-3px);
+  }
+
+  .kpi-card h5 {
+    font-size: 1rem;
+    color: #6c757d;
+  }
+
+  .kpi-card h2, .kpi-card h4 {
+    font-weight: 600;
+    font-size: 1.5rem;
+    color: #212529;
+  }

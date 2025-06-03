@@ -1,0 +1,55 @@
+<%- include('../partials/header') %>
+
+<div class="container py-4">
+  <h1>Import Recurring Payments</h1>
+
+  <% if (typeof success_msg !== 'undefined' && success_msg) { %>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+      <%= success_msg %>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  <% } %>
+
+  <% if (typeof error_msg !== 'undefined' && error_msg) { %>
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+      <%= error_msg %>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  <% } %>
+
+  <form action="/recurrents/import" method="POST" enctype="multipart/form-data" class="mt-4">
+    <div class="mb-3">
+      <label for="file" class="form-label">Select Excel File (.xlsx)</label>
+      <input
+        type="file"
+        name="file"
+        id="file"
+        class="form-control"
+        accept=".xlsx"
+        required
+      >
+    </div>
+    <button type="submit" class="btn btn-primary">Import</button>
+    <a href="/recurrents" class="btn btn-secondary">Back</a>
+  </form>
+
+  <div class="mt-4">
+    <h5>Required Columns in Excel:</h5>
+    <ul>
+      <li><code>account</code> — exact company name as in your system (must match an existing Account)</li>
+      <li><code>contact</code> — exact contact name as in your system (must match an existing Contact)</li>
+      <li><code>deal</code> — exact deal name as in your system (must match an existing Deal)</li>
+      <li><code>recurringAmount</code> — numeric value (e.g. <code>10000</code>)</li>
+      <li><code>recurringPeriodMonths</code> — numeric value (e.g. <code>12</code> for annual)</li>
+      <li>
+        <code>firstPaymentDate</code> — either:
+        <ul>
+          <li>ISO format: <code>YYYY-MM-DD</code> (e.g. <code>2022-04-01</code>)</li>
+          <li>or a native Excel date cell (Excel will serialize it as a JS Date object under the hood)</li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

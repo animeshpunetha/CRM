@@ -46,7 +46,7 @@ router.get('/new', ensureAuthenticated, async (req, res) => {
 
 // POST /contacts → handle form submission
 router.post('/', ensureAuthenticated, async (req, res) => {
-  const { owner, name, company, email, phone } = req.body;
+  const { owner, name, company, email, phone, action } = req.body;
   let errors = [];
 
   if (!owner || !name || !email) {
@@ -67,8 +67,13 @@ router.post('/', ensureAuthenticated, async (req, res) => {
   }
 
   try {
-    await Contact.create({ owner, name, company, email, phone });
+    await Contact.create({ owner, name, company, email, phone, action });
     req.flash('success_msg', 'Contact created successfully...');
+    // if the “Save and New” button was clicked, go back to the blank form:
+   if (action === 'save_and_new') {
+     return res.redirect('/contacts/new');
+   }
+   // otherwise (“Save” or default), go to index:
     res.redirect('/contacts');
   } catch (err) {
     console.error(err);

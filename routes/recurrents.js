@@ -8,20 +8,18 @@ const Deal = require('../models/Deal');
 const Excel = require('exceljs');
 const multer = require('multer');
 const { parseExcelBuffer } = require('../utils/excelImporter');
-const { ensureAuthenticated, ensureRole } = require('../middleware/auth');
+const { ensureAuthenticated } = require('../middleware/auth');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
 // 1) LIST all recurring payments
 router.get('/', ensureAuthenticated, async (req, res) => {
   try {
-    // Optional: allow sorting by a field
     const sortField = req.query.sort || 'createdAt';
     const sortOrder = req.query.order === 'asc' ? 1 : -1;
-    const sortOptions = { [sortField]: sortOrder };
 
     const all = await RecurringPayment.find()
-      .sort(sortOptions)
+      .sort({ [sortField]: sortOrder })
       .populate('account', 'name')
       .populate('contact', 'name')
       .populate('deal', 'name')
@@ -38,7 +36,7 @@ router.get('/', ensureAuthenticated, async (req, res) => {
   }
 });
 
-// 2) SHOW form to create a new recurring payment
+// 2) SHOW form to create
 router.get('/new', ensureAuthenticated, async (req, res) => {
   try {
     const [accounts, contacts, deals] = await Promise.all([
@@ -51,9 +49,9 @@ router.get('/new', ensureAuthenticated, async (req, res) => {
       accounts,
       contacts,
       deals,
-      account: '',                   // ← add this
-      contact: '',                   // ← and this
-      deal: '',                      // ← and this
+      account: '',
+      contact: '',
+      deal: '',
       recurringAmount: '',
       recurringPeriodMonths: '',
       firstPaymentDate: '',
@@ -77,14 +75,7 @@ router.post('/', ensureAuthenticated, async (req, res) => {
   } = req.body;
   let errors = [];
 
-  if (
-    !account ||
-    !contact ||
-    !deal ||
-    !recurringAmount ||
-    !recurringPeriodMonths ||
-    !firstPaymentDate
-  ) {
+  if (!account || !contact || !deal || !recurringAmount || !recurringPeriodMonths || !firstPaymentDate) {
     errors.push({ msg: 'Please fill in all required fields.' });
   }
 
@@ -95,17 +86,17 @@ router.post('/', ensureAuthenticated, async (req, res) => {
       Deal.find().sort('name')
     ]);
     return res.render('recurrents/new', {
-    accounts,
-    contacts,
-    deals,
-    account,                    // ← pass the selected account back in
-    contact,                    // ← pass the selected contact back in
-    deal,                       // ← pass the selected deal back in
-    recurringAmount,
-    recurringPeriodMonths,
-    firstPaymentDate,
-    errors
-  });
+      accounts,
+      contacts,
+      deals,
+      account,
+      contact,
+      deal,
+      recurringAmount,
+      recurringPeriodMonths,
+      firstPaymentDate,
+      errors
+    });
   }
 
   try {
@@ -130,6 +121,9 @@ router.post('/', ensureAuthenticated, async (req, res) => {
       accounts,
       contacts,
       deals,
+      account,
+      contact,
+      deal,
       recurringAmount,
       recurringPeriodMonths,
       firstPaymentDate,
@@ -172,18 +166,10 @@ router.get('/:id/edit', ensureAuthenticated, async (req, res) => {
 
 // 5) HANDLE update
 router.put('/:id', ensureAuthenticated, async (req, res) => {
-  const { account, contact, deal, recurringAmount, recurringPeriodMonths, firstPaymentDate } =
-    req.body;
+  const { account, contact, deal, recurringAmount, recurringPeriodMonths, firstPaymentDate } = req.body;
   let errors = [];
 
-  if (
-    !account ||
-    !contact ||
-    !deal ||
-    !recurringAmount ||
-    !recurringPeriodMonths ||
-    !firstPaymentDate
-  ) {
+  if (!account || !contact || !deal || !recurringAmount || !recurringPeriodMonths || !firstPaymentDate) {
     errors.push({ msg: 'Please fill in all required fields.' });
   }
 
@@ -249,7 +235,7 @@ router.delete('/:id', ensureAuthenticated, async (req, res) => {
 });
 
 // 7) IMPORT from XLSX
-router.get('/import', ensureAuthenticated, async (req, res) => {
+router.get('/import', ensureAuthenticated, (req, res) => {
   res.render('recurrents/import');
 });
 
@@ -261,56 +247,55 @@ router.post('/import', ensureAuthenticated, upload.single('file'), async (req, r
 
   try {
     const rows = await parseExcelBuffer(req.file.buffer);
-    // rows is an array of objects corresponding to each row’s columns,
-    // e.g. { account, contact, deal, recurringAmount, recurringPeriodMonths, firstPaymentDate }
-    // We need to map “account/contact/deal names” → their ObjectId. So:
+
     const accountsByName = {};
     const contactsByName = {};
     const dealsByName = {};
 
-    (await Account.find().select('name _id')).forEach(a => {
-      accountsByName[a.name] = a._id;
-    });
-    (await Contact.find().select('name _id')).forEach(c => {
-      contactsByName[c.name] = c._id;
-    });
-    (await Deal.find().select('name _id')).forEach(d => {
-      dealsByName[d.name] = d._id;
+    (await Account.find().select('name _id')).forEach(a => accountsByName[a.name] = a._id);
+    (await Contact.find().select('name _id')).forEach(c => contactsByName[c.name] = c._id);
+    (await Deal.find().select('name _id')).forEach(d => dealsByName[d.name] = d._id);
+
+    const toInsert = [];
+    let errorMsg = null;
+
+    rows.forEach((r, idx) => {
+      if (!accountsByName[r.account]) {
+        errorMsg = `Unknown account in row ${idx + 2}: "${r.account}"`;
+      } else if (!contactsByName[r.contact]) {
+        errorMsg = `Unknown contact in row ${idx + 2}: "${r.contact}"`;
+      } else if (!dealsByName[r.deal]) {
+        errorMsg = `Unknown deal in row ${idx + 2}: "${r.deal}"`;
+      } else {
+        const amt = Number(r.recurringAmount);
+        const per = Number(r.recurringPeriodMonths);
+        const fpd = new Date(r.firstPaymentDate);
+        if (isNaN(amt) || isNaN(per) || isNaN(fpd.getTime())) {
+          errorMsg = `Invalid numeric/date field in row ${idx + 2}`;
+        } else {
+          toInsert.push({
+            account: accountsByName[r.account],
+            contact: contactsByName[r.contact],
+            deal: dealsByName[r.deal],
+            recurringAmount: amt,
+            recurringPeriodMonths: per,
+            firstPaymentDate: fpd
+          });
+        }
+      }
     });
 
-    const toInsert = rows.map((r, idx) => {
-      if (!accountsByName[r.account]) {
-        throw new Error(`Unknown account in row ${idx + 2}: "${r.account}"`);
-      }
-      if (!contactsByName[r.contact]) {
-        throw new Error(`Unknown contact in row ${idx + 2}: "${r.contact}"`);
-      }
-      if (!dealsByName[r.deal]) {
-        throw new Error(`Unknown deal in row ${idx + 2}: "${r.deal}"`);
-      }
-      // Required fields
-      const amt = Number(r.recurringAmount);
-      const per = Number(r.recurringPeriodMonths);
-      const fpd = new Date(r.firstPaymentDate);
-      if (isNaN(amt) || isNaN(per) || isNaN(fpd.getTime())) {
-        throw new Error(`Invalid numeric/date field in row ${idx + 2}`);
-      }
-      return {
-        account: accountsByName[r.account],
-        contact: contactsByName[r.contact],
-        deal: dealsByName[r.deal],
-        recurringAmount: amt,
-        recurringPeriodMonths: per,
-        firstPaymentDate: fpd
-      };
-    });
+    if (errorMsg) {
+      req.flash('error_msg', errorMsg);
+      return res.redirect('/recurrents/import');
+    }
 
     await RecurringPayment.insertMany(toInsert);
     req.flash('success_msg', 'Imported successfully');
     res.redirect('/recurrents');
   } catch (err) {
     console.error('Import error:', err);
-    req.flash('error_msg', err.message.startsWith('Unknown') ? err.message : 'Failed to import');
+    req.flash('error_msg', 'Failed to import. Please check file format.');
     res.redirect('/recurrents/import');
   }
 });
@@ -331,8 +316,8 @@ router.get('/export', ensureAuthenticated, async (req, res) => {
     ws.columns = [
       { header: 'Account Name', key: 'account', width: 25 },
       { header: 'Contact Name', key: 'contact', width: 25 },
-      { header: 'Deal Name',    key: 'deal',    width: 25 },
-      { header: 'Amount (₹)',   key: 'recurringAmount', width: 15 },
+      { header: 'Deal Name', key: 'deal', width: 25 },
+      { header: 'Amount (₹)', key: 'recurringAmount', width: 15 },
       { header: 'Period (months)', key: 'recurringPeriodMonths', width: 15 },
       { header: 'First Payment Date', key: 'firstPaymentDate', width: 20 }
     ];
@@ -344,34 +329,24 @@ router.get('/export', ensureAuthenticated, async (req, res) => {
         deal: rp.deal?.name || '',
         recurringAmount: rp.recurringAmount,
         recurringPeriodMonths: rp.recurringPeriodMonths,
-        firstPaymentDate: rp.firstPaymentDate.toLocaleDateString()
+        firstPaymentDate: rp.firstPaymentDate.toISOString().split('T')[0]
       });
     });
 
-    // Timestamp for filename
     const now = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    const ts =
-      now.getFullYear().toString() +
-      pad(now.getMonth() + 1) +
-      pad(now.getDate()) +
-      '_' +
-      pad(now.getHours()) +
-      pad(now.getMinutes()) +
-      pad(now.getSeconds());
-
+    const ts = now.toISOString().replace(/[-T:\.Z]/g, '').slice(0, 14);
     const filename = `recurrents_${ts}.xlsx`;
+
     res.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     );
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-
     await wb.xlsx.write(res);
     res.end();
   } catch (err) {
-    console.error('Export error:', err);
-    req.flash('error_msg', 'Failed to export');
+    console.error(err);
+    req.flash('error_msg', 'Failed to export data');
     res.redirect('/recurrents');
   }
 });

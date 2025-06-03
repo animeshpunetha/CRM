@@ -1,77 +1,91 @@
 <%- include('../partials/header') %>
 
-  <div class="card shadow-sm mb-4">
-    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-      <h2 class="card-title mb-0">All Deals</h2>
-      <div>
-        <a href="/deals/new" class="btn btn-light">New Deal</a> <a href="/deals/import" class="btn btn-light">Import
-          XLSX</a> <a href="/deals/export" class="btn btn-light">Export XLSX</a> <a href="/deals/kanban" class="btn btn-light">Kanban View</a>
+<div class="container mt-5">
+  <div class="card border-0 shadow-sm rounded-4">
+    <div class="card-header bg-light border-bottom d-flex justify-content-between align-items-center rounded-top-4">
+      <div class="d-flex align-items-center">
+        <h4 class="mb-0 text-primary me-3">
+          <i class="bi bi-handshake me-2"></i>All Deals
+        </h4>
+
+        <!-- Sort Dropdown -->
+        <div class="dropdown">
+          <button class="btn btn-outline-secondary dropdown-toggle btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-funnel me-1"></i>Sort By
+          </button>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="?sort=name&order=<%= currentSort === 'name' && currentOrder === 'asc' ? 'desc' : 'asc' %>">Name <%= currentSort==='name' ? (currentOrder==='asc' ? '▲' : '▼') : '' %></a></li>
+            <li><a class="dropdown-item" href="?sort=amount&order=<%= currentSort === 'amount' && currentOrder === 'asc' ? 'desc' : 'asc' %>">Amount <%= currentSort==='amount' ? (currentOrder==='asc' ? '▲' : '▼') : '' %></a></li>
+            <li><a class="dropdown-item" href="?sort=probablity&order=<%= currentSort === 'probablity' && currentOrder === 'asc' ? 'desc' : 'asc' %>">Probability <%= currentSort==='probablity' ? (currentOrder==='asc' ? '▲' : '▼') : '' %></a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <a href="/deals/new" class="btn btn-outline-primary">
+          <i class="bi bi-plus-circle me-1"></i>New
+        </a>
+        <a href="/deals/import" class="btn btn-outline-secondary">
+          <i class="bi bi-upload me-1"></i>Import
+        </a>
+        <a href="/deals/export" class="btn btn-outline-success">
+          <i class="bi bi-download me-1"></i>Export
+        </a>
+        <a href="/deals/kanban" class="btn btn-outline-dark">
+          <i class="bi bi-columns-gap me-1"></i>Kanban
+        </a>
       </div>
     </div>
+
     <div class="card-body">
-      <% if (deals.length===0) { %>
-        <div class="alert alert-info" role="alert">
-          No deals found. Start by creating a new deal!
-        </div>
-        <% } else { %>
-          <div class="table-responsive">
-            <table class="table table-hover table-striped">
-              <thead class="table-light">
+      <% if (deals && deals.length > 0) { %>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle text-center">
+            <thead class="table-light">
+              <tr>
+                <th>Owner</th>
+                <th>Deal Name</th>
+                <th>Amount</th>
+                <th>Probability</th>
+                <th>Contact</th>
+                <th>Account</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% deals.forEach(deal => { %>
                 <tr>
-                  <th>Deal Owner</th>
-                  <th><a
-                    href="?sort=name&order=<%= currentSort === 'name' && currentOrder === 'asc' ? 'desc' : 'asc' %>">
-                    Deal Name <%= currentSort==='name' ? (currentOrder==='asc' ? '▲' : '▼' ) : '' %>
-                  </a></th>
-                  <th><a
-                    href="?sort=amount&order=<%= currentSort === 'amount' && currentOrder === 'asc' ? 'desc' : 'asc' %>">
-                    Amount <%= currentSort==='amount' ? (currentOrder==='asc' ? '▲' : '▼' ) : '' %>
-                  </a></th>
-                  <th><a
-                    href="?sort=probablity&order=<%= currentSort === 'probablity' && currentOrder === 'asc' ? 'desc' : 'asc' %>">
-                    Probablity <%= currentSort==='probablity' ? (currentOrder==='asc' ? '▲' : '▼' ) : '' %>
-                  </a></th>
-                  <th>Contact</th>
-                  <th>Account</th>
-                  <th>Actions</th>
+                  <td><%= deal.owner ? deal.owner.name : '—' %></td>
+                  <td><%= deal.name %></td>
+                  <td>₹<%= deal.amount ? deal.amount.toLocaleString() : '0' %></td>
+                  <td><%= deal.probablity ? deal.probablity : '0' %>%</td>
+                  <td><%= deal.contact_person ? deal.contact_person.name : '—' %></td>
+                  <td><%= deal.account ? deal.account.name : '—' %></td>
+                  <td>
+                    <!-- <a href="/deals/<%= deal._id %>" class="btn btn-sm btn-outline-info me-1">
+                      <i class="bi bi-eye me-1"></i>View
+                    </a> -->
+                    <a href="/deals/<%= deal._id %>/edit" class="btn btn-sm btn-outline-warning me-1">
+                      <i class="bi bi-pencil me-1"></i>Edit
+                    </a>
+                    <form action="/deals/<%= deal._id %>?_method=DELETE" method="POST" class="d-inline">
+                      <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this deal?')">
+                        <i class="bi bi-trash me-1"></i>Delete
+                      </button>
+                    </form>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                <% deals.forEach(deal=> { %>
-                  <tr>
-                    <td>
-                      <%= deal.owner ? deal.owner.name : '—' %>
-                    </td>
-                    <td>
-                      <%= deal.name %>
-                    </td>
-                    <td>₹<%= deal.amount ? deal.amount.toLocaleString() : '0' %>
-                    </td>
-                    <td>
-                      <%= deal.probablity ? deal.probablity : '0' %>%
-                    </td>
-                    <td>
-                      <%= deal.contact_person ? deal.contact_person.name : '—' %>
-                    </td>
-                    <td>
-                      <%= deal.account ? deal.account.name : '—' %>
-                    </td>
-                    <td class="text-nowrap"> <a href="/deals/<%= deal._id %>" class="btn btn-sm btn-info me-2">View</a>
-                      <a href="/deals/<%= deal._id %>/edit" class="btn btn-sm btn-warning me-2">Edit</a>
-                      <form action="/deals/<%= deal._id %>?_method=DELETE" method="POST" class="d-inline">
-                        <button type="submit" class="btn btn-sm btn-danger"
-                          onclick="return confirm('Are you sure you want to delete this deal?')">Delete</button>
-                      </form>
-                    </td>
-                  </tr>
-                  <% }) %>
-              </tbody>
-            </table>
-          </div>
-          <% } %>
-    </div>
-    <div class="card-footer text-end">
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div class="alert alert-secondary text-center">
+          <i class="bi bi-info-circle me-2"></i>No deals found. Start by creating a new deal!
+        </div>
+      <% } %>
     </div>
   </div>
+</div>
 
-  <%- include('../partials/footer') %>
+<%- include('../partials/footer') %>

@@ -207,7 +207,7 @@ router.get('/kanban', ensureAuthenticated, async (req, res) => {
       });
     });
 
-    res.render('deals/kanban', { buckets, grouped });
+    res.render('deals/kanban', { buckets, grouped, stageMapping: Deal.stageMapping });
   } catch (err) {
     console.error(err);
     res.status(500).send('Server Error');

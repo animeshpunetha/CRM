@@ -32,4 +32,6 @@ DealSchema.virtual('stage_name').get(function () {
 DealSchema.set('toJSON', { virtuals: true });
 DealSchema.set('toObject', { virtuals: true });
 
-module.exports = mongoose.model('Deal', DealSchema);
+const Deal = mongoose.model('Deal', DealSchema);
+Deal.stageMapping = stageMapping;
+module.exports = Deal;

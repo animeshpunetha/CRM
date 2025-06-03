@@ -1,32 +1,33 @@
 <%- include('../partials/header') %>
 
-<div class="container-fluid mt-4">
-  <h2 class="mb-4">Deals Kanban View</h2>
+<div class="container mt-5">
+  <h2 class="mb-4 text-primary"><i class="bi bi-kanban-fill me-2"></i>Deals Kanban View</h2>
 
-  <div class="row d-flex flex-nowrap overflow-auto" style="gap: 1rem;">
+  <div class="d-flex flex-nowrap overflow-auto" style="gap: 1rem;">
     <% buckets.forEach(p => { %>
-      <div class="card flex-shrink-0" style="min-width: 250px;">
-        <div class="card-header text-white bg-primary">
-          <strong><%= p %>% Probability</strong>
-          <br>
-          <small><%= grouped[p].count %> deal(s)</small><br>
-          <small><%= grouped[p].formattedTotal %> total</small>
+      <div class="card border-0 shadow-sm rounded-4 flex-shrink-0" style="min-width: 280px;">
+        <div class="card-header bg-light border-bottom text-primary rounded-top-4">
+          <div class="d-flex flex-column">
+            <strong><%= stageMapping[p] %> (<%= p %>%)</strong>
+            <small class="text-secondary"><%= grouped[p].count %> deal(s)</small>
+            <small class="text-secondary"><%= grouped[p].formattedTotal %> total</small>
+          </div>
         </div>
-        <div class="card-body p-2" style="max-height: 70vh; overflow-y: auto;">
+        <div class="card-body p-3" style="max-height: 70vh; overflow-y: auto;">
           <% if (grouped[p].deals.length === 0) { %>
-            <div class="text-muted text-center">No deals</div>
+            <div class="text-center text-muted py-4">No deals</div>
           <% } else { %>
             <% grouped[p].deals.forEach(deal => { %>
-              <div class="card mb-2 border">
-                <div class="card-body p-2">
-                  <strong><%= deal.name %></strong><br>
-                  <small>Account: <%= deal.account?.name || 'N/A' %></small><br>
-                  <small>Owner: <%= deal.owner?.name || 'N/A' %></small><br>
-                  <small>Amount: ₹<%= deal.amount.toLocaleString('en-IN') %></small><br>
-                  <small>Due: <%= new Date(deal.due_date).toLocaleDateString() %></small>
+              <div class="card border shadow-sm rounded-3 mb-3">
+                <div class="card-body p-3">
+                  <h6 class="mb-2 text-dark"><strong><%= deal.name %></strong></h6>
+                  <p class="mb-1"><small class="text-secondary">Account: <%= deal.account?.name || 'N/A' %></small></p>
+                  <p class="mb-1"><small class="text-secondary">Owner: <%= deal.owner?.name || 'N/A' %></small></p>
+                  <p class="mb-1"><small class="text-secondary">Amount: ₹<%= deal.amount.toLocaleString('en-IN') %></small></p>
+                  <p class="mb-0"><small class="text-secondary">Due: <%= new Date(deal.due_date).toLocaleDateString() %></small></p>
                 </div>
               </div>
-            <% }); %>
+            <% }) %>
           <% } %>
         </div>
       </div>
