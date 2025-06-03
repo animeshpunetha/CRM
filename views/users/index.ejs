@@ -50,7 +50,7 @@
                   <td><%= user.name %></td>
                   <td><%= user.email %></td>
                   <td>
-                    <span class="badge bg-<%= user.role === 'admin' ? 'danger' : 'secondary' %>">
+                    <span class="badge bg-<%= ((user.role === 'admin') || (user.role === 'super_admin')) ? 'danger' : 'secondary' %>">
                       <%= user.role.charAt(0).toUpperCase() + user.role.slice(1) %>
                     </span>
                   </td>

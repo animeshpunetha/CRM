@@ -60,6 +60,7 @@
         <select name="role" id="role" class="form-select">
           <option value="user" <%= (typeof role !== 'undefined' && role === 'user') ? 'selected' : '' %>>User</option>
           <option value="admin" <%= (typeof role !== 'undefined' && role === 'admin') ? 'selected' : '' %>>Admin</option>
+          <option value="super_admin" <%= (typeof role !== 'undefined' && role === 'super_admin') ? 'selected' : '' %>>Super Admin</option>
         </select>
       </div>
       <div class="d-flex justify-content-end gap-2 mt-4">
