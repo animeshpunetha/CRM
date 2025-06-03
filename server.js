@@ -9,6 +9,8 @@ const passport = require('passport');
 const path = require('path');
 const bodyParser = require('body-parser');
 const methodOverride = require('method-override');
+const recurrentsRouter = require('./routes/recurrents');
+const { startRecurringEmailJob } = require('./utils/recurringMailer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -84,6 +86,10 @@ app.use('/leads',    ensureAuthenticated, require('./routes/leads'));
 app.use('/deals',    ensureAuthenticated, require('./routes/deals'));
 app.use('/accounts', ensureAuthenticated, require('./routes/accounts'));
 app.use('/tasks', ensureAuthenticated, require('./routes/tasks'));
+// Recurring Payment
+app.use('/recurrents', recurrentsRouter);
+startRecurringEmailJob();
+
 
 
 //Start Server
