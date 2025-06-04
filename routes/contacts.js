@@ -193,7 +193,7 @@ router.put(
 
 // DELETE /contacts/:id/delete — delete the contact
 router.delete(
-  '/:id/delete', ensureAuthenticated, ensureRole('admin', { redirectBack: true }),
+  '/:id/delete', ensureAuthenticated, ensureRole(['admin', 'super_admin'], { redirectBack: true }),
   async (req, res) => {
     try {
       await Contact.findByIdAndDelete(req.params.id);

@@ -12,25 +12,60 @@ const { ensureAuthenticated, ensureRole } = require('../middleware/auth');
 // Set up multer (in-memory storage)
 const upload = multer({ storage: multer.memoryStorage() });
 
-// GET /deals
+async function buildOwnerFilter(req) {
+  // If super_admin, no filter:
+  if (req.user.role === 'super_admin') {
+    return {};
+  }
+
+  // Otherwise, user can see:
+  //   • their own deals  (owner = req.user._id)
+  //   • plus any deals owned by direct reports
+  const currentEmpId = req.user.emp_id;
+  const currentUserId = req.user._id;
+
+  // Find all users whose manager_id equals currentEmpId
+  const directReports = await User.find(
+    { manager_id: currentEmpId },
+    '_id'
+  ).lean();
+
+  // Collect their _id’s:
+  const ownersToInclude = [ currentUserId ];
+  directReports.forEach(u => ownersToInclude.push(u._id));
+
+  return { owner: { $in: ownersToInclude } };
+}
+
+
+// ─── GET /deals → list all deals, filtered by role/hierarchy ───────────────
 router.get('/', ensureAuthenticated, async (req, res) => {
   try {
-    // get the sort fields and order from query parameters
+    // 1) build sort options (unchanged)
     const sortField = req.query.sort || 'createdAt';
     const sortOrder = req.query.order === 'asc' ? 1 : -1;
+    const sortOptions = { [sortField]: sortOrder };
 
-    // construct dynamic sort
-    const sortOptions = {};
-    sortOptions[sortField] = sortOrder;
+    // 2) build owner‐filter based on role/manager‐hierarchy
+    const ownerFilter = await buildOwnerFilter(req); 
+    //    → {} if super_admin, or { owner: { $in: [...] } } otherwise
 
-    const deals = await Deal.find().sort(sortOptions).collation({ locale: 'en', strength: 2 })
+    // 3) fetch deals with that filter
+    const deals = await Deal.find(ownerFilter)
+      .sort(sortOptions)
+      .collation({ locale: 'en', strength: 2 })
       .populate('owner', 'name')
       .populate('account', 'name')
       .populate('contact_person', 'name');
-    res.render('deals/index', { deals, currentSort: sortField, currentOrder: sortOrder === 1 ? 'asc' : 'desc' });
+
+    return res.render('deals/index', {
+      deals,
+      currentSort: sortField,
+      currentOrder: sortOrder === 1 ? 'asc' : 'desc'
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).send('Server Error');
+    return res.status(500).send('Server Error');
   }
 });
 
@@ -151,53 +186,43 @@ router.post('/', ensureAuthenticated, async (req, res) => {
   }
 });
 
-// GET /deals/kanban → Kanban view grouped by probability
+// ─── GET /deals/kanban → same owner‐filter logic + group by probability ─────
 router.get('/kanban', ensureAuthenticated, async (req, res) => {
   try {
-    const buckets = [0, 10, 20, 40, 60, 75, 90, 100];
+    // 1) Determine which deals to show
+    const ownerFilter = await buildOwnerFilter(req);
 
-    const deals = await Deal.find()
+    // 2) Fetch only those deals
+    const deals = await Deal.find(ownerFilter)
       .populate('owner', 'name')
       .populate('account', 'name')
       .populate('contact_person', 'name')
-      .sort('name'); // You might want to sort by due_date or something else relevant for kanban cards
+      .sort('name'); 
 
-    // Calculate total count of all deals for percentage calculation
+    // 3) Now group them by probability as before
+    const buckets = [0, 10, 20, 40, 60, 75, 90, 100];
     const totalDealsCount = deals.length;
-    // Calculate total amount of all deals
-    const totalAmountAllDeals = deals.reduce((sum, deal) => sum + deal.amount, 0);
 
-
+    // initialize grouped data
     const grouped = buckets.reduce((acc, p) => {
-      acc[p] = {
-        deals: [],
-        count: 0,
-        totalAmount: 0,
-        percentage: 0 // Will be calculated after all deals are grouped
-      };
+      acc[p] = { deals: [], count: 0, totalAmount: 0, percentage: 0 };
       return acc;
     }, {});
 
+    // fill grouped
     deals.forEach(deal => {
-      if (grouped[deal.probablity]) { // Ensure the probability exists in your buckets
+      if (grouped[deal.probablity]) {
         grouped[deal.probablity].deals.push(deal);
         grouped[deal.probablity].count++;
         grouped[deal.probablity].totalAmount += deal.amount;
       }
     });
 
-    // Calculate percentages after grouping
+    // calculate percentages & formatted totals
     buckets.forEach(p => {
       if (totalDealsCount > 0) {
-        grouped[p].percentage = ((grouped[p].count / totalDealsCount) * 100).toFixed(0); // Round to whole number
-      } else {
-        grouped[p].percentage = 0;
+        grouped[p].percentage = ((grouped[p].count / totalDealsCount) * 100).toFixed(0);
       }
-    });
-
-    buckets.forEach(p => {
-      // already have grouped[p].totalAmount and grouped[p].percentage
-      // format totalAmount as currency string once:
       const amt = grouped[p].totalAmount || 0;
       grouped[p].formattedTotal = amt.toLocaleString('en-IN', {
         style: 'currency',
@@ -207,10 +232,15 @@ router.get('/kanban', ensureAuthenticated, async (req, res) => {
       });
     });
 
-    res.render('deals/kanban', { buckets, grouped, stageMapping: Deal.stageMapping });
+    // 4) Render the kanban view
+    return res.render('deals/kanban', {
+      buckets,
+      grouped,
+      stageMapping: Deal.stageMapping
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).send('Server Error');
+    return res.status(500).send('Server Error');
   }
 });
 
@@ -285,7 +315,7 @@ router.post('/import', ensureAuthenticated, upload.single('file'), async (req, r
 });
 
 // GET /deals/:id/edit → show the edit form
-router.get('/:id/edit', ensureAuthenticated, ensureRole('admin', { redirectBack: true }), async (req, res) => {
+router.get('/:id/edit', ensureAuthenticated, ensureRole(['admin', 'super_admin'], { redirectBack: true }), async (req, res) => {
   try {
     const deal = await Deal.findById(req.params.id);
     const [users, accounts, contacts] = await Promise.all([
@@ -315,7 +345,7 @@ router.get('/:id/edit', ensureAuthenticated, ensureRole('admin', { redirectBack:
 
 
 // PUT /deals/:id → update deal
-router.put('/:id', ensureAuthenticated, ensureRole('admin', { redirectBack: true }), async (req, res) => {
+router.put('/:id', ensureAuthenticated, ensureRole(['admin', 'super_admin'], { redirectBack: true }), async (req, res) => {
   const { owner, name, account, contact_person, amount, due_date, probablity } = req.body;
 
   let errors = [];
@@ -363,7 +393,7 @@ router.put('/:id', ensureAuthenticated, ensureRole('admin', { redirectBack: true
 
 
 // DELETE /deals/:id → delete deal
-router.delete('/:id', ensureAuthenticated, ensureRole('admin', { redirectBack: true }), async (req, res) => {
+router.delete('/:id', ensureAuthenticated, ensureRole(['admin', 'super_admin'], { redirectBack: true }), async (req, res) => {
   try {
     await Deal.findByIdAndDelete(req.params.id);
     req.flash('success_msg', 'Deal deleted successfully');

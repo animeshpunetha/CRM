@@ -228,7 +228,7 @@ router.put('/:id/edit', ensureAuthenticated, async (req, res) => {
 router.delete(
   '/:id/delete',
   ensureAuthenticated,
-  ensureRole('admin', { redirectBack: true }),
+  ensureRole(['admin', 'super_admin'], { redirectBack: true }),
   async (req, res) => {
     try {
       await Lead.findByIdAndDelete(req.params.id);

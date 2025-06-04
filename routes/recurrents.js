@@ -8,7 +8,7 @@ const Deal = require('../models/Deal');
 const Excel = require('exceljs');
 const multer = require('multer');
 const { parseExcelBuffer } = require('../utils/excelImporter');
-const { ensureAuthenticated } = require('../middleware/auth');
+const { ensureAuthenticated, ensureRole } = require('../middleware/auth');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -222,7 +222,7 @@ router.put('/:id', ensureAuthenticated, async (req, res) => {
 });
 
 // 6) DELETE
-router.delete('/:id', ensureAuthenticated, async (req, res) => {
+router.delete('/:id', ensureAuthenticated, ensureRole(['admin', 'super_admin'], { redirectBack: true }), async (req, res) => {
   try {
     await RecurringPayment.findByIdAndDelete(req.params.id);
     req.flash('success_msg', 'Recurring payment deleted');

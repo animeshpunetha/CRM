@@ -211,7 +211,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
 });
 
 // GET /accounts/:id/edit  → show the edit form
-router.get('/:id/edit', ensureAuthenticated, ensureRole('admin',{ redirectBack: true }), async (req, res) => {
+router.get('/:id/edit', ensureAuthenticated, ensureRole(['admin', 'super_admin'],{ redirectBack: true }), async (req, res) => {
   try {
     const [account, users] = await Promise.all([
       Account.findById(req.params.id),
@@ -234,7 +234,7 @@ router.get('/:id/edit', ensureAuthenticated, ensureRole('admin',{ redirectBack: 
 });
 
 // PUT /accounts/:id  → handle the edit form submit
-router.put('/:id', ensureAuthenticated, ensureRole('admin',{ redirectBack: true }), async (req, res) => {
+router.put('/:id', ensureAuthenticated, ensureRole(['admin', 'super_admin'],{ redirectBack: true }), async (req, res) => {
   const {
     owner, name, type, industry,
     billing_street, billing_city,
@@ -281,7 +281,7 @@ router.put('/:id', ensureAuthenticated, ensureRole('admin',{ redirectBack: true 
 });
 
 // DELETE /accounts/:id
-router.delete('/:id/delete', ensureAuthenticated, ensureRole('admin',{ redirectBack: true }), async (req, res) => {
+router.delete('/:id/delete', ensureAuthenticated, ensureRole(['admin', 'super_admin'],{ redirectBack: true }), async (req, res) => {
   try {
     await Account.findByIdAndDelete(req.params.id);
     req.flash('success_msg', 'Account deleted successfully');

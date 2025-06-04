@@ -18,7 +18,7 @@ function ensureAdminOrSuper(req, res, next) {
     return next();
   }
   req.flash('error_msg', 'Not authorized');
-  return res.redirect('back');
+  return res.redirect('/users');
 }
 
 // ─── GET /users - list all users (only admin/super_admin) ─────────────────────
